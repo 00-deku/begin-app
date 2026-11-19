@@ -1,23 +1,28 @@
 import express from "express";
-import mongoose from "mongoose";
 import path from "path";
-const app = express();
-
 import dotenv from "dotenv";
+import connectDB from "./database/connection.js";
+
 dotenv.config();
 
+const app = express();
+const PORT = process.env.PORT || 8000;
+
+// Connect to Database
+connectDB();
+
 app.use(express.static("public"));
-app.use(express.static(path.resolve("./public")))
+app.use(express.static(path.resolve("./public")));
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
 app.set("view engine", "ejs");
 app.set("views", path.resolve("./views"));
 
-mongoose.connect(process.env.MONGO_URI).then((data)=>{console.log("MongoDB Connected")}).catch((error)=>{console.log(`${e}`)})
-const PORT = process.env.PORT || 8000;
+app.get("/", (req, res) => {
+  return res.render("home");
+});
 
-app.get("/", (req,res)=> {
-    return res.render("home")
-})
-
-app.listen(PORT, ()=> {`server started at ${PORT}`})
+app.listen(PORT, () => {
+  console.log(`🚀 Server started at http://localhost:${PORT}`);
+});
