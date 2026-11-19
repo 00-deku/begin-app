@@ -1,0 +1,30 @@
+services:
+  # MongoDB Service (Used by index.js and mongoose)
+  mongodb:
+    image: mongo:7.0
+    container_name: begin_mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: begin_db
+    volumes:
+      - mongo_data:/data/db
+
+  # PostgreSQL Service (Alternative relational database option)
+  postgres:
+    image: postgres:16-alpine
+    container_name: begin_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: begin_user
+      POSTGRES_PASSWORD: begin_secure_dev_password
+      POSTGRES_DB: begin_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  mongo_data:
+  postgres_data:
