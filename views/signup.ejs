@@ -107,6 +107,9 @@
 
                 if (!res.ok) throw new Error(data.message || "Failed to send OTP");
 
+                if (data.devOtp) {
+                    otpInput.value = data.devOtp;
+                }
                 showAlert(data.message || "OTP sent! Check your inbox.");
                 requestForm.classList.add("hidden");
                 verifyForm.classList.remove("hidden");

@@ -33,6 +33,7 @@ const sendVerificationOTP = async (email, purpose) => {
   });
 
   const otp = generateOTP();
+  console.log(`[AUTH OTP] Code for ${email} (${purpose}): ${otp}`);
 
   const otpRecord = await EmailOTP.create({
     email,
@@ -51,10 +52,18 @@ const sendVerificationOTP = async (email, purpose) => {
     });
 
     return {
-      message: "OTP sent successfully.",
+      message: "OTP sent successfully. Check your email or server log.",
+      devOtp: process.env.NODE_ENV !== "production" ? otp : undefined,
     };
-
   } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[AUTH OTP] Email sending failed (${error.message}). Use dev OTP: ${otp}`);
+      return {
+        message: `OTP sent (Dev code: ${otp}).`,
+        devOtp: otp,
+      };
+    }
+
     await EmailOTP.deleteOne({
       _id: otpRecord._id,
     });
