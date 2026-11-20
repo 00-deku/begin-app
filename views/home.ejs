@@ -1,11 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <%- include('partials/head') %>
+    <title>Begin | Student Founders</title>
 </head>
-<body>
-    home page
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('partials/nav') %>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-6">
+        <% if (locals.user) { %>
+            <!-- User is logged in -->
+            <div class="space-y-6">
+                <!-- Welcome Banner -->
+                <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center font-bold text-xl uppercase">
+                            <%= user.profile?.fullName ? user.profile.fullName.charAt(0) : user.email.charAt(0) %>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h1 class="text-2xl font-bold tracking-tight">
+                                    <%= user.profile?.fullName || user.email %>
+                                </h1>
+                                <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                    Logged In
+                                </span>
+                                <% if (user.profile?.role) { %>
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                        <%= user.profile.role === 'BOTH' ? 'Founder & Builder' : user.profile.role %>
+                                    </span>
+                                <% } %>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-0.5">
+                                <%= user.profile?.college ? user.profile.college + ' • ' : '' %><%= user.email %>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile & Community Details (if onboarded) -->
+                <% if (user.profile) { %>
+                <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Community Profile</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Full Name</span>
+                            <p class="text-sm font-medium text-gray-800 mt-1"><%= user.profile.fullName || 'Not set' %></p>
+                        </div>
+                        <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">College</span>
+                            <p class="text-sm font-medium text-gray-800 mt-1"><%= user.profile.college || 'Not set' %></p>
+                        </div>
+                        <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl md:col-span-2">
+                            <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Bio</span>
+                            <p class="text-sm text-gray-800 mt-1"><%= user.profile.bio || 'No bio yet.' %></p>
+                        </div>
+
+                        <% if (user.profile.founderDetails?.startupName) { %>
+                        <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                            <span class="text-xs font-bold text-orange-800 uppercase tracking-wider">Startup / Project</span>
+                            <p class="text-sm font-medium text-gray-900 mt-1"><%= user.profile.founderDetails.startupName %></p>
+                            <span class="inline-block text-xs text-orange-700 bg-orange-100 px-2 py-0.5 rounded mt-1">Stage: <%= user.profile.founderDetails.stage || 'In progress' %></span>
+                        </div>
+                        <% } %>
+
+                        <% if (user.profile.joinerDetails?.skills?.length > 0) { %>
+                        <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                            <span class="text-xs font-bold text-blue-800 uppercase tracking-wider">Skills</span>
+                            <div class="flex flex-wrap gap-1.5 mt-2">
+                                <% user.profile.joinerDetails.skills.forEach(skill => { %>
+                                    <span class="text-xs font-medium text-blue-800 bg-blue-100 px-2 py-0.5 rounded"><%= skill %></span>
+                                <% }) %>
+                            </div>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+                <% } %>
+
+                <!-- User Session & JWT Payload Details Card -->
+                <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center justify-between">
+                        <span>Decoded User Session Payload</span>
+                        <span class="text-xs font-mono bg-gray-100 text-gray-600 px-2.5 py-1 rounded">req.user / locals.user</span>
+                    </h2>
+
+                    <!-- Raw JSON Payload Viewer -->
+                    <div>
+                        <span class="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">Raw JSON Payload</span>
+                        <pre class="bg-gray-900 text-green-400 p-4 rounded-xl text-xs font-mono overflow-x-auto"><%= JSON.stringify(user, null, 2) %></pre>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-gray-100 flex justify-end">
+                        <a href="/api/auth/logout" class="bg-red-50 text-red-600 hover:bg-red-100 font-medium text-sm px-4 py-2 rounded-lg transition">
+                            Log out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <% } else { %>
+            <!-- User is not logged in -->
+            <div class="text-center py-16 bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+                <div class="max-w-md mx-auto">
+                    <div class="w-16 h-16 bg-black text-white rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
+                        B
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-gray-900">
+                        Welcome to Begin
+                    </h1>
+                    <p class="text-gray-500 mt-2 text-sm">
+                        Built for student founders. Authenticate with your college email to access the community and start creating posts.
+                    </p>
+                    <div class="mt-6 flex items-center justify-center space-x-3">
+                        <a href="/auth/signup" class="bg-black text-white font-medium text-sm px-5 py-2.5 rounded-lg hover:bg-gray-800 transition shadow-sm">
+                            Create Account
+                        </a>
+                        <a href="/auth/login" class="bg-white border border-gray-300 text-gray-700 font-medium text-sm px-5 py-2.5 rounded-lg hover:bg-gray-50 transition">
+                            Sign In
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+    </main>
 </body>
 </html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Select Role | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('../partials/nav') %>
+
+    <main class="flex-1 flex items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+            <div class="text-center mb-8">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Step 1 of 2</span>
+                <h1 class="text-2xl font-bold tracking-tight mt-1">What describes you best?</h1>
+                <p class="text-sm text-gray-500 mt-1">Choose how you want to participate in Begin.</p>
+            </div>
+
+            <div class="space-y-4 mb-6" id="roleOptions">
+                <!-- Founder -->
+                <div data-role="FOUNDER" class="role-card cursor-pointer border-2 border-gray-200 hover:border-black rounded-xl p-4 transition flex items-start space-x-4">
+                    <div class="text-2xl">🚀</div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Founder</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">I have an idea or existing project and I'm looking for builders and teammates.</p>
+                    </div>
+                </div>
+
+                <!-- Joiner -->
+                <div data-role="JOINER" class="role-card cursor-pointer border-2 border-gray-200 hover:border-black rounded-xl p-4 transition flex items-start space-x-4">
+                    <div class="text-2xl">⚡</div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Joiner / Builder</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">I want to join exciting student startups, build things, and contribute skills.</p>
+                    </div>
+                </div>
+
+                <!-- Both -->
+                <div data-role="BOTH" class="role-card cursor-pointer border-2 border-gray-200 hover:border-black rounded-xl p-4 transition flex items-start space-x-4">
+                    <div class="text-2xl">🤝</div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">Both</h3>
+                        <p class="text-xs text-gray-500 mt-0.5">I have projects of my own but I'm also open to collaborating on other teams.</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="continueBtn" disabled class="w-full bg-gray-300 text-white font-medium py-2.5 rounded-lg text-sm transition">
+                Continue to Profile Setup
+            </button>
+        </div>
+    </main>
+
+    <script>
+        let selectedRole = null;
+        const cards = document.querySelectorAll(".role-card");
+        const continueBtn = document.getElementById("continueBtn");
+
+        cards.forEach(card => {
+            card.addEventListener("click", () => {
+                cards.forEach(c => c.classList.remove("border-black", "bg-gray-50"));
+                card.classList.add("border-black", "bg-gray-50");
+                selectedRole = card.getAttribute("data-role");
+                continueBtn.disabled = false;
+                continueBtn.classList.remove("bg-gray-300");
+                continueBtn.classList.add("bg-black", "hover:bg-gray-800");
+            });
+        });
+
+        continueBtn.addEventListener("click", async () => {
+            if (!selectedRole) return;
+            continueBtn.disabled = true;
+            continueBtn.textContent = "Saving...";
+
+            const res = await fetch("/onboarding/role", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ role: selectedRole })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                window.location.href = data.nextStep;
+            } else {
+                alert(data.message || "Failed to save role");
+                continueBtn.disabled = false;
+                continueBtn.textContent = "Continue to Profile Setup";
+            }
+        });
+    </script>
+</body>
+</html>

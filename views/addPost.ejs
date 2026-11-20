@@ -1,0 +1,133 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include("./partials/head") %>
+    <title>Create a Post | Begin</title>
+</head>
+
+<body>
+    <%- include("./partials/nav") %>
+    <%- include("./partials/script") %>
+
+    <div class="container mt-50 ml-50">
+
+        <h1 class="text-2xl font-bold mb-6">Create a Post</h1>
+
+        <form action="/post" method="POST" enctype="multipart/form-data">
+
+            <!-- Post Type -->
+            <div class="mb-5">
+                <label for="postType"
+                    class="block mb-2.5 text-sm font-medium text-heading">
+                    Post Type
+                </label>
+
+                <select
+                    id="postType"
+                    name="postType"
+                    class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base block w-100 px-3 py-2.5"
+                    required
+                >
+                    <option value="Update">Update</option>
+                    <option value="Milestone">Milestone</option>
+                    <option value="Looking For">Looking For</option>
+                </select>
+            </div>
+
+            <!-- Title -->
+            <div class="mb-5">
+                <label for="title"
+                    class="block mb-2.5 text-sm font-medium text-heading">
+                    Title
+                </label>
+
+                <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    placeholder="What's happening?"
+                    class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base block w-100 px-3 py-2.5"
+                    required
+                />
+            </div>
+
+            <!-- Body -->
+            <div class="mb-5">
+                <label for="body"
+                    class="block mb-2.5 text-sm font-medium text-heading">
+                    Description
+                </label>
+
+                <textarea
+                    id="body"
+                    name="body"
+                    rows="5"
+                    placeholder="Share your thoughts, progress or ideas..."
+                    class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base block w-200 p-3.5"
+                    required
+                ></textarea>
+            </div>
+
+            <!-- Cover Image -->
+            <div class="mb-5">
+                <label for="CoverImageUrl"
+                    class="block mb-2.5 text-sm font-medium text-heading">
+                    Upload Cover Image
+                </label>
+
+                <input
+                    type="file"
+                    id="CoverImageUrl"
+                    name="CoverImageUrl"
+                    accept="image/*"
+                    class="cursor-pointer bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base block w-200 shadow-xs"
+                />
+            </div>
+
+            <!-- Profile Image URL -->
+            <div class="mb-5">
+                <label for="profileImageUrl"
+                    class="block mb-2.5 text-sm font-medium text-heading">
+                    Profile Image URL
+                </label>
+
+                <input
+                    type="text"
+                    id="profileImageUrl"
+                    name="profileImageUrl"
+                    placeholder="https://example.com/profile.jpg"
+                    class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base block w-100 px-3 py-2.5"
+                    required
+                />
+            </div>
+
+            <!-- Startup Name -->
+            <div class="mb-5">
+                <label for="StartupName"
+                    class="block mb-2.5 text-sm font-medium text-heading">
+                    Startup Name
+                </label>
+
+                <input
+                    type="text"
+                    id="StartupName"
+                    name="StartupName"
+                    placeholder="Enter your startup name"
+                    class="bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base block w-100 px-3 py-2.5"
+                    required
+                />
+            </div>
+
+            <!-- Submit -->
+            <button
+                type="submit"
+                class="text-white bg-brand hover:bg-brand-strong font-medium rounded-base text-sm px-4 py-2.5 cursor-pointer"
+            >
+                Publish Post
+            </button>
+
+        </form>
+    </div>
+</body>
+</html>

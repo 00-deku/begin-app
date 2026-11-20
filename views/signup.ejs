@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Create Account | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('partials/nav') %>
+
+    <main class="flex-1 flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white border border-gray-200 rounded-2xl shadow-sm p-8">
+            <div class="mb-6 text-center">
+                <h1 class="text-2xl font-bold tracking-tight">Create your account</h1>
+                <p class="text-sm text-gray-500 mt-1">We'll send a one-time verification code to your email.</p>
+            </div>
+
+            <!-- Alert Box -->
+            <div id="alertBox" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
+
+            <!-- Step 1: Request OTP -->
+            <form id="requestOtpForm" class="space-y-4">
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        required 
+                        placeholder="you@college.edu"
+                        class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                    />
+                </div>
+                <button 
+                    type="submit" 
+                    id="sendOtpBtn"
+                    class="w-full bg-black text-white font-medium py-2.5 px-4 rounded-lg hover:bg-gray-800 transition text-sm flex items-center justify-center"
+                >
+                    Send Verification Code
+                </button>
+            </form>
+
+            <!-- Step 2: Verify OTP -->
+            <form id="verifyOtpForm" class="space-y-4 hidden mt-4">
+                <div>
+                    <label for="otp" class="block text-sm font-medium text-gray-700 mb-1">6-Digit Code</label>
+                    <input 
+                        type="text" 
+                        id="otp" 
+                        maxlength="6" 
+                        required 
+                        placeholder="123456"
+                        class="w-full text-center tracking-widest text-lg font-mono px-3.5 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                    />
+                    <p class="text-xs text-gray-500 mt-1 text-center">Code expires in 5 minutes</p>
+                </div>
+                <button 
+                    type="submit" 
+                    id="verifyOtpBtn"
+                    class="w-full bg-black text-white font-medium py-2.5 px-4 rounded-lg hover:bg-gray-800 transition text-sm"
+                >
+                    Verify & Create Account
+                </button>
+                <button 
+                    type="button" 
+                    id="backBtn" 
+                    class="w-full text-xs text-gray-600 hover:text-black py-1 text-center"
+                >
+                    Change email address
+                </button>
+            </form>
+
+            <div class="mt-6 pt-6 border-t border-gray-100 text-center text-sm text-gray-500">
+                Already have an account? 
+                <a href="/auth/login" class="font-medium text-black hover:underline">Sign in</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const PURPOSE = "SIGNUP";
+        const alertBox = document.getElementById("alertBox");
+        const requestForm = document.getElementById("requestOtpForm");
+        const verifyForm = document.getElementById("verifyOtpForm");
+        const emailInput = document.getElementById("email");
+        const otpInput = document.getElementById("otp");
+        const sendOtpBtn = document.getElementById("sendOtpBtn");
+        const verifyOtpBtn = document.getElementById("verifyOtpBtn");
+        const backBtn = document.getElementById("backBtn");
+
+        function showAlert(message, isError = false) {
+            alertBox.textContent = message;
+            alertBox.className = `p-3 rounded-lg text-sm mb-4 ${isError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`;
+            alertBox.classList.remove("hidden");
+        }
+
+        requestForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            sendOtpBtn.disabled = true;
+            sendOtpBtn.textContent = "Sending code...";
+
+            try {
+                const res = await fetch("/api/auth/send-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: emailInput.value, purpose: PURPOSE })
+                });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message || "Failed to send OTP");
+
+                showAlert(data.message || "OTP sent! Check your inbox.");
+                requestForm.classList.add("hidden");
+                verifyForm.classList.remove("hidden");
+                otpInput.focus();
+            } catch (err) {
+                showAlert(err.message, true);
+            } finally {
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.textContent = "Send Verification Code";
+            }
+        });
+
+        verifyForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            verifyOtpBtn.disabled = true;
+            verifyOtpBtn.textContent = "Verifying...";
+
+            try {
+                const res = await fetch("/api/auth/verify-otp", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: emailInput.value, otp: otpInput.value, purpose: PURPOSE })
+                });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message || "Invalid OTP");
+
+                showAlert("Account verified! Redirecting...", false);
+                setTimeout(() => {
+                    window.location.href = data.nextStep || "/";
+                }, 1000);
+            } catch (err) {
+                showAlert(err.message, true);
+            } finally {
+                verifyOtpBtn.disabled = false;
+                verifyOtpBtn.textContent = "Verify & Create Account";
+            }
+        });
+
+        backBtn.addEventListener("click", () => {
+            verifyForm.classList.add("hidden");
+            requestForm.classList.remove("hidden");
+            alertBox.classList.add("hidden");
+        });
+    </script>
+</body>
+</html>
