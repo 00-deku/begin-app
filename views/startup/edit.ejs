@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Edit <%= startup.name %> | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('../partials/nav') %>
+
+    <main class="flex-1 max-w-2xl w-full mx-auto p-6 space-y-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Edit Startup Page</h1>
+                <p class="text-sm text-gray-500 mt-1">Update your project description, stage, visibility, or links.</p>
+            </div>
+            <a href="/startup/<%= startup._id %>" class="text-xs border border-gray-300 rounded-lg px-3 py-1.5 font-medium text-gray-700 hover:bg-gray-50 transition">
+                Back to Startup
+            </a>
+        </div>
+
+        <div id="statusMessage" class="hidden p-3 rounded-lg text-sm"></div>
+
+        <form id="editStartupForm" class="space-y-5 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Startup / Project Name</label>
+                <input type="text" id="name" value="<%= startup.name %>" required class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm" />
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-xs font-medium text-gray-700">One-Line Pitch (Max 200 characters)</label>
+                    <span id="pitchCount" class="text-xs text-gray-400">0 / 200</span>
+                </div>
+                <input type="text" id="pitch" value="<%= startup.pitch %>" required maxlength="200" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Development Stage</label>
+                    <select id="stage" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">
+                        <option value="Idea" <%= startup.stage === 'Idea' ? 'selected' : '' %>>Idea</option>
+                        <option value="Building MVP" <%= startup.stage === 'Building MVP' ? 'selected' : '' %>>Building MVP</option>
+                        <option value="Launched" <%= startup.stage === 'Launched' ? 'selected' : '' %>>Launched</option>
+                        <option value="Has users" <%= startup.stage === 'Has users' ? 'selected' : '' %>>Has users</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Visibility Mode (M3.4)</label>
+                    <select id="visibility" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm bg-white">
+                        <option value="PUBLIC" <%= startup.visibility === 'PUBLIC' ? 'selected' : '' %>>Public to verified members</option>
+                        <option value="STEALTH" <%= startup.visibility === 'STEALTH' ? 'selected' : '' %>>Stealth (name & pitch hidden, roles visible)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Industry Tags (comma-separated)</label>
+                <input type="text" id="industryTags" value="<%= (startup.industryTags || []).join(', ') %>" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm" />
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">The Problem</label>
+                <textarea id="problem" rows="3" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm"><%= startup.problem || '' %></textarea>
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">The Solution</label>
+                <textarea id="solution" rows="3" class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm"><%= startup.solution || '' %></textarea>
+            </div>
+
+            <div class="pt-3 border-t border-gray-100">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Project Links</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="url" id="linkWebsite" value="<%= startup.links?.website || '' %>" placeholder="Website URL" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    <input type="url" id="linkDemo" value="<%= startup.links?.demo || '' %>" placeholder="Live Demo URL" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    <input type="url" id="linkPitchDeck" value="<%= startup.links?.pitchDeck || '' %>" placeholder="Pitch Deck URL" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    <input type="url" id="linkGithub" value="<%= startup.links?.github || '' %>" placeholder="GitHub URL" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                <a href="/startup/<%= startup._id %>" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition">
+                    Cancel
+                </a>
+                <button type="submit" class="px-5 py-2 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+
+        <!-- Ownership Transfer Card (Requirement M3.5) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-3">
+            <h2 class="text-sm font-bold text-gray-900">Transfer Ownership (M3.5)</h2>
+            <p class="text-xs text-gray-500">Transfer primary ownership to another active member of your team.</p>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <select id="newOwnerSelect" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
+                    <% (startup.teamMembers || []).forEach(member => { %>
+                        <% if (member.userId?._id?.toString() !== startup.ownerId?._id?.toString()) { %>
+                            <option value="<%= member.userId?._id || member.userId %>">
+                                <%= member.userId?.email || 'Team Member' %> (<%= member.role %>)
+                            </option>
+                        <% } %>
+                    <% }) %>
+                </select>
+                <button type="button" onclick="transferOwnership()" class="text-xs bg-gray-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-black transition">
+                    Transfer
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const startupId = "<%= startup._id %>";
+        const form = document.getElementById("editStartupForm");
+        const statusEl = document.getElementById("statusMessage");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById("name").value,
+                pitch: document.getElementById("pitch").value,
+                stage: document.getElementById("stage").value,
+                visibility: document.getElementById("visibility").value,
+                industryTags: document.getElementById("industryTags").value,
+                problem: document.getElementById("problem").value,
+                solution: document.getElementById("solution").value,
+                links: {
+                    website: document.getElementById("linkWebsite").value,
+                    demo: document.getElementById("linkDemo").value,
+                    pitchDeck: document.getElementById("linkPitchDeck").value,
+                    github: document.getElementById("linkGithub").value,
+                },
+            };
+
+            const res = await fetch(`/startup/api/${startupId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = `/startup/${startupId}`;
+            } else {
+                statusEl.className = "p-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200";
+                statusEl.textContent = data.message || "Failed to update startup.";
+                statusEl.classList.remove("hidden");
+            }
+        });
+
+        async function transferOwnership() {
+            const select = document.getElementById("newOwnerSelect");
+            if (!select.value) {
+                alert("Please select an active team member.");
+                return;
+            }
+            if (!confirm("Are you sure you want to transfer ownership? This cannot be undone.")) return;
+
+            const res = await fetch(`/startup/api/${startupId}/transfer`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newOwnerId: select.value }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = `/startup/${startupId}`;
+            } else {
+                alert(data.message || "Failed to transfer ownership.");
+            }
+        }
+    </script>
+</body>
+</html>

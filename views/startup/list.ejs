@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Campus Startups | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('../partials/nav') %>
+
+    <main class="flex-1 max-w-5xl w-full mx-auto p-6 space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Campus Startups</h1>
+                <p class="text-sm text-gray-500 mt-1">Explore projects built by students on campus or launch your own venture.</p>
+            </div>
+            <a href="/startup/new" class="text-sm bg-black hover:bg-gray-800 text-white font-medium px-4 py-2 rounded-lg transition">
+                Create Startup Page
+            </a>
+        </div>
+
+        <!-- Startup Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <% if (startups && startups.length > 0) { %>
+                <% startups.forEach(startup => { %>
+                    <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <h2 class="text-lg font-bold text-gray-900">
+                                    <%= startup.name %>
+                                </h2>
+                                <div class="flex items-center gap-1.5">
+                                    <% if (startup.visibility === 'STEALTH') { %>
+                                        <span class="text-xs bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full font-medium border border-gray-200">
+                                            Stealth
+                                        </span>
+                                    <% } %>
+                                    <span class="text-xs bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full font-semibold">
+                                        <%= startup.stage %>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <p class="text-sm text-gray-600 mt-2 line-clamp-2">
+                                <%= startup.pitch %>
+                            </p>
+
+                            <!-- Industry Tags -->
+                            <% if (startup.industryTags && startup.industryTags.length > 0) { %>
+                                <div class="flex flex-wrap gap-1.5 mt-3">
+                                    <% startup.industryTags.forEach(tag => { %>
+                                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                            <%= tag %>
+                                        </span>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+                        </div>
+
+                        <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
+                            <span class="text-xs text-gray-500">
+                                <%= (startup.openRoles || []).filter(r => r.status === 'OPEN').length %> open roles
+                            </span>
+                            <a href="/startup/<%= startup._id %>" class="text-xs text-black font-semibold hover:underline">
+                                View Page &rarr;
+                            </a>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <div class="col-span-2 bg-white border border-gray-200 rounded-2xl p-12 text-center">
+                    <h3 class="text-base font-semibold text-gray-900">No startups published yet</h3>
+                    <p class="text-xs text-gray-500 mt-1 mb-4">Be the first student founder to publish a startup page on campus.</p>
+                    <a href="/startup/new" class="text-xs bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition">
+                        Launch Startup Page
+                    </a>
+                </div>
+            <% } %>
+        </div>
+    </main>
+</body>
+</html>
