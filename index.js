@@ -8,6 +8,7 @@ import authRoute from "./routes/auth.route.js";
 import { attachUser, requireOnboarded } from "./middlewares/auth.middleware.js";
 import onboardingRoute from "./routes/onboarding.route.js";
 import profileRoute from "./routes/profile.route.js";
+import startupRoute from "./routes/startup.route.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -35,6 +36,8 @@ app.use("/user", authRoute);
 app.use("/onboarding", onboardingRoute);
 app.use("/profile", profileRoute);
 app.use("/api/profile", profileRoute);
+app.use("/startup", startupRoute);
+app.use("/api/startup", startupRoute);
 
 // Pages
 app.get("/", requireOnboarded, (req, res) => {

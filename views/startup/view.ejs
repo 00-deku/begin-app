@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title><%= startup.name %> | Begin Startups</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('../partials/nav') %>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-6 space-y-6">
+        <!-- Startup Header Card -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-2xl font-bold tracking-tight text-gray-900">
+                            <%= startup.name %>
+                        </h1>
+                        <span class="bg-orange-100 text-orange-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                            <%= startup.stage %>
+                        </span>
+                        <% if (startup.visibility === 'STEALTH') { %>
+                            <span class="bg-gray-100 text-gray-700 text-xs font-medium px-2.5 py-0.5 rounded-full border border-gray-200">
+                                Stealth Mode
+                            </span>
+                        <% } else { %>
+                            <span class="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                                Public
+                            </span>
+                        <% } %>
+                    </div>
+
+                    <p class="text-sm text-gray-600 mt-2 leading-relaxed">
+                        <%= startup.pitch %>
+                    </p>
+
+                    <!-- Industry Tags -->
+                    <% if (startup.industryTags && startup.industryTags.length > 0) { %>
+                        <div class="flex flex-wrap gap-1.5 mt-3">
+                            <% startup.industryTags.forEach(tag => { %>
+                                <span class="text-xs bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded">
+                                    <%= tag %>
+                                </span>
+                            <% }) %>
+                        </div>
+                    <% } %>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <% if (isOwner) { %>
+                        <a href="/startup/<%= startup._id %>/edit" class="text-xs border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-3 py-1.5 rounded-lg transition">
+                            Edit
+                        </a>
+                        <button onclick="archiveStartup()" class="text-xs border border-red-200 text-red-600 hover:bg-red-50 font-medium px-3 py-1.5 rounded-lg transition">
+                            Archive
+                        </button>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Links -->
+            <% if (startup.links && (startup.links.website || startup.links.demo || startup.links.pitchDeck || startup.links.github)) { %>
+                <div class="mt-4 pt-4 border-t border-gray-100 flex flex-wrap gap-4 text-xs font-medium">
+                    <% if (startup.links.website) { %>
+                        <a href="<%= startup.links.website %>" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Website &rarr;</a>
+                    <% } %>
+                    <% if (startup.links.demo) { %>
+                        <a href="<%= startup.links.demo %>" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Live Prototype &rarr;</a>
+                    <% } %>
+                    <% if (startup.links.pitchDeck) { %>
+                        <a href="<%= startup.links.pitchDeck %>" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">Pitch Deck &rarr;</a>
+                    <% } %>
+                    <% if (startup.links.github) { %>
+                        <a href="<%= startup.links.github %>" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">GitHub &rarr;</a>
+                    <% } %>
+                </div>
+            <% } %>
+        </div>
+
+        <!-- Problem and Solution (M3.1 / M3.4) -->
+        <% if (startup.problem || startup.solution) { %>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <% if (startup.problem) { %>
+                    <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                        <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">The Problem</h2>
+                        <p class="text-sm text-gray-700 leading-relaxed"><%= startup.problem %></p>
+                    </div>
+                <% } %>
+                <% if (startup.solution) { %>
+                    <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                        <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2">The Solution</h2>
+                        <p class="text-sm text-gray-700 leading-relaxed"><%= startup.solution %></p>
+                    </div>
+                <% } %>
+            </div>
+        <% } %>
+
+        <!-- Team Members (Requirement M3.2) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Team Members</h2>
+                <span class="text-xs text-gray-500"><%= (startup.teamMembers || []).length %> members</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <% (startup.teamMembers || []).forEach(member => { %>
+                    <div class="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between">
+                        <div>
+                            <a href="/profile/<%= member.userId?._id || member.userId %>" class="text-sm font-medium text-gray-900 hover:underline">
+                                <%= member.userId?.email || 'Team Member' %>
+                            </a>
+                            <p class="text-xs text-gray-500 mt-0.5"><%= member.role %></p>
+                        </div>
+                        <% if (isOwner && member.userId?._id?.toString() !== user?.userId?.toString()) { %>
+                            <button onclick="removeMember('<%= member.userId?._id || member.userId %>')" class="text-xs text-red-600 hover:text-red-800">
+                                Remove
+                            </button>
+                        <% } %>
+                    </div>
+                <% }) %>
+            </div>
+
+            <!-- Invite Member Form (Owner only) -->
+            <% if (isOwner) { %>
+                <form id="inviteMemberForm" class="pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-2">
+                    <input type="email" id="inviteEmail" required placeholder="Teammate's college email" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    <input type="text" id="inviteRole" placeholder="Role (e.g. Lead Designer)" class="w-full sm:w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    <button type="submit" class="text-xs bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition">
+                        Invite Member
+                    </button>
+                </form>
+            <% } %>
+        </div>
+
+        <!-- Open Roles (Requirement M3.3 / M5) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Open Roles</h2>
+                <span class="text-xs text-gray-500">
+                    <%= (startup.openRoles || []).filter(r => r.status === 'OPEN').length %> open
+                </span>
+            </div>
+
+            <div class="space-y-3">
+                <% const activeRoles = (startup.openRoles || []).filter(r => r.status === 'OPEN'); %>
+                <% if (activeRoles.length > 0) { %>
+                    <% activeRoles.forEach(role => { %>
+                        <div class="p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <h3 class="text-sm font-bold text-gray-900"><%= role.title %></h3>
+                                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-medium"><%= role.roleType %></span>
+                                    <span class="text-xs text-gray-500"><%= role.commitmentHours %> hrs/week</span>
+                                </div>
+
+                                <% if (role.skillsNeeded && role.skillsNeeded.length > 0) { %>
+                                    <div class="flex flex-wrap gap-1.5 mt-2">
+                                        <% role.skillsNeeded.forEach(skill => { %>
+                                            <span class="text-xs bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded">
+                                                <%= skill %>
+                                            </span>
+                                        <% }) %>
+                                    </div>
+                                <% } %>
+
+                                <% if (role.equityOrCreditNote) { %>
+                                    <p class="text-xs text-gray-500 mt-1">Compensation: <%= role.equityOrCreditNote %></p>
+                                <% } %>
+                            </div>
+
+                            <div class="flex items-center space-x-2">
+                                <% if (isOwner) { %>
+                                    <button onclick="deleteRole('<%= role._id %>')" class="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1">
+                                        Close Role
+                                    </button>
+                                <% } else { %>
+                                    <button class="text-xs bg-black text-white px-3 py-1.5 rounded-lg font-medium hover:bg-gray-800 transition">
+                                        Apply
+                                    </button>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <p class="text-xs text-gray-400">No open roles currently posted for this project.</p>
+                <% } %>
+            </div>
+
+            <!-- Post Open Role Form (Owner only) -->
+            <% if (isOwner) { %>
+                <form id="addRoleForm" class="pt-4 border-t border-gray-100 space-y-3">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500">Post New Role</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <input type="text" id="roleTitle" required placeholder="Role Title (e.g. Frontend Engineer)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                        <select id="roleType" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="teammate">Teammate</option>
+                            <option value="co-founder">Co-founder</option>
+                            <option value="short-term collaboration">Short-term collaboration</option>
+                        </select>
+                        <input type="number" id="roleHours" min="1" max="168" value="10" placeholder="Hours / week" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input type="text" id="roleSkills" placeholder="Skills needed (e.g. React, TypeScript)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                        <input type="text" id="roleNote" placeholder="Equity / credit note (optional)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                    <button type="submit" class="text-xs bg-gray-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-black transition">
+                        Post Open Role
+                    </button>
+                </form>
+            <% } %>
+        </div>
+
+        <!-- Milestone Timeline (Requirement M3.3 / M6) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <h2 class="text-lg font-semibold text-gray-900">Milestone Timeline</h2>
+
+            <div class="space-y-4">
+                <% if (startup.milestones && startup.milestones.length > 0) { %>
+                    <% startup.milestones.forEach(milestone => { %>
+                        <div class="flex items-start space-x-3 border-l-2 border-black pl-4 py-1">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                        <%= milestone.milestoneType %>
+                                    </span>
+                                    <span class="text-xs text-gray-400">
+                                        <%= new Date(milestone.date).toLocaleDateString() %>
+                                    </span>
+                                </div>
+                                <h4 class="text-sm font-semibold text-gray-900 mt-1"><%= milestone.title %></h4>
+                                <% if (milestone.description) { %>
+                                    <p class="text-xs text-gray-600 mt-1"><%= milestone.description %></p>
+                                <% } %>
+                            </div>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <p class="text-xs text-gray-400">No milestones recorded yet. Share your progress as you build.</p>
+                <% } %>
+            </div>
+
+            <!-- Add Milestone Form (Owner only) -->
+            <% if (isOwner) { %>
+                <form id="addMilestoneForm" class="pt-4 border-t border-gray-100 space-y-3">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500">Record New Milestone</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <input type="text" id="milestoneTitle" required placeholder="Milestone Title (e.g. Launched MVP on campus)" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                        <select id="milestoneType" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="Idea validated">Idea validated</option>
+                            <option value="Prototype ready">Prototype ready</option>
+                            <option value="First users">First users</option>
+                            <option value="Launched">Launched</option>
+                            <option value="Won event">Won event</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                    </div>
+                    <textarea id="milestoneDescription" rows="2" placeholder="Brief summary of what was accomplished" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></textarea>
+                    <button type="submit" class="text-xs bg-gray-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-black transition">
+                        Add Milestone
+                    </button>
+                </form>
+            <% } %>
+        </div>
+    </main>
+
+    <script>
+        const startupId = "<%= startup._id %>";
+
+        // Invite team member
+        const inviteForm = document.getElementById("inviteMemberForm");
+        if (inviteForm) {
+            inviteForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const email = document.getElementById("inviteEmail").value;
+                const role = document.getElementById("inviteRole").value;
+
+                const res = await fetch(`/startup/api/${startupId}/invite`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, role }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Failed to invite member.");
+                }
+            });
+        }
+
+        // Remove team member
+        async function removeMember(memberUserId) {
+            if (!confirm("Remove this member from the team?")) return;
+            const res = await fetch(`/startup/api/${startupId}/member/${memberUserId}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.message || "Failed to remove member.");
+            }
+        }
+
+        // Add open role
+        const roleForm = document.getElementById("addRoleForm");
+        if (roleForm) {
+            roleForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const payload = {
+                    title: document.getElementById("roleTitle").value,
+                    roleType: document.getElementById("roleType").value,
+                    commitmentHours: document.getElementById("roleHours").value,
+                    skillsNeeded: document.getElementById("roleSkills").value,
+                    equityOrCreditNote: document.getElementById("roleNote").value,
+                };
+
+                const res = await fetch(`/startup/api/${startupId}/role`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Failed to post role.");
+                }
+            });
+        }
+
+        // Delete open role
+        async function deleteRole(roleId) {
+            if (!confirm("Close this role?")) return;
+            const res = await fetch(`/startup/api/${startupId}/role/${roleId}`, {
+                method: "DELETE",
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.message || "Failed to delete role.");
+            }
+        }
+
+        // Add milestone
+        const milestoneForm = document.getElementById("addMilestoneForm");
+        if (milestoneForm) {
+            milestoneForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const payload = {
+                    title: document.getElementById("milestoneTitle").value,
+                    milestoneType: document.getElementById("milestoneType").value,
+                    description: document.getElementById("milestoneDescription").value,
+                };
+
+                const res = await fetch(`/startup/api/${startupId}/milestone`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert(data.message || "Failed to add milestone.");
+                }
+            });
+        }
+
+        // Archive startup
+        async function archiveStartup() {
+            if (!confirm("Are you sure you want to archive this startup?")) return;
+            const res = await fetch(`/startup/api/${startupId}/archive`, {
+                method: "POST",
+            });
+            const data = await res.json();
+            if (data.success) {
+                window.location.href = "/startup";
+            } else {
+                alert(data.message || "Failed to archive startup.");
+            }
+        }
+    </script>
+</body>
+</html>
