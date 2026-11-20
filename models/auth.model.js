@@ -12,6 +12,13 @@ const authSchema = new Schema(
       index: true,
     },
 
+    googleId: {
+      type: String,
+      default: null,
+      sparse: true,
+      index: true,
+    },
+
     isEmailVerified: {
       type: Boolean,
       default: false,
