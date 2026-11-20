@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Discovery & Search | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('../partials/nav') %>
+
+    <main class="flex-1 max-w-5xl w-full mx-auto p-6 space-y-6">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight">Campus Discovery</h1>
+            <p class="text-sm text-gray-500 mt-1">Discover student builders, co-founders, and projects across campus.</p>
+        </div>
+
+        <!-- Search Bar and Tabs (M4.3) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <form method="GET" action="/discovery" class="flex flex-col sm:flex-row gap-3">
+                <input type="hidden" name="tab" value="<%= tab %>" />
+                <div class="flex-1">
+                    <input 
+                        type="text" 
+                        name="q" 
+                        value="<%= query %>" 
+                        placeholder="Search by name, skill (e.g. React, Python), or startup..." 
+                        class="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                    />
+                </div>
+                <button type="submit" class="px-5 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition">
+                    Search
+                </button>
+                <% if (query || Object.values(memberFilters || {}).some(Boolean) || Object.values(startupFilters || {}).some(Boolean)) { %>
+                    <a href="/discovery?tab=<%= tab %>" class="px-3.5 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 text-center transition">
+                        Clear
+                    </a>
+                <% } %>
+            </form>
+
+            <!-- Navigation Tabs -->
+            <div class="flex items-center space-x-2 border-b border-gray-100 pt-2 text-sm font-medium">
+                <a href="/discovery?tab=members<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition <%= tab === 'members' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
+                    Builders & Members
+                </a>
+                <a href="/discovery?tab=startups<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition <%= tab === 'startups' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
+                    Startups & Projects
+                </a>
+                <a href="/discovery?tab=all<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition <%= tab === 'all' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
+                    All Results
+                </a>
+            </div>
+
+            <!-- Member Filters (M4.1) -->
+            <% if (tab === 'members') { %>
+                <form method="GET" action="/discovery" class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2">
+                    <input type="hidden" name="tab" value="members" />
+                    <input type="hidden" name="q" value="<%= query %>" />
+
+                    <input type="text" name="skill" value="<%= memberFilters.skill || '' %>" placeholder="Filter by skill" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs" />
+                    <input type="text" name="branch" value="<%= memberFilters.branch || '' %>" placeholder="Filter by branch" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs" />
+                    
+                    <select name="year" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white">
+                        <option value="">Any Year</option>
+                        <option value="1st Year" <%= memberFilters.year === '1st Year' ? 'selected' : '' %>>1st Year</option>
+                        <option value="2nd Year" <%= memberFilters.year === '2nd Year' ? 'selected' : '' %>>2nd Year</option>
+                        <option value="3rd Year" <%= memberFilters.year === '3rd Year' ? 'selected' : '' %>>3rd Year</option>
+                        <option value="4th Year" <%= memberFilters.year === '4th Year' ? 'selected' : '' %>>4th Year</option>
+                    </select>
+
+                    <select name="availability" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white">
+                        <option value="">Any Availability</option>
+                        <option value="Open to join" <%= memberFilters.availability === 'Open to join' ? 'selected' : '' %>>Open to join</option>
+                        <option value="Looking for co-founder" <%= memberFilters.availability === 'Looking for co-founder' ? 'selected' : '' %>>Looking for co-founder</option>
+                        <option value="Just exploring" <%= memberFilters.availability === 'Just exploring' ? 'selected' : '' %>>Just exploring</option>
+                    </select>
+
+                    <button type="submit" class="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-black transition">
+                        Apply Filters
+                    </button>
+                </form>
+            <% } %>
+
+            <!-- Startup Filters (M4.2) -->
+            <% if (tab === 'startups') { %>
+                <form method="GET" action="/discovery" class="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-2">
+                    <input type="hidden" name="tab" value="startups" />
+                    <input type="hidden" name="q" value="<%= query %>" />
+
+                    <input type="text" name="industry" value="<%= startupFilters.industry || '' %>" placeholder="Filter by industry" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs" />
+                    
+                    <select name="stage" class="px-3 py-1.5 border border-gray-300 rounded-lg text-xs bg-white">
+                        <option value="">Any Stage</option>
+                        <option value="Idea" <%= startupFilters.stage === 'Idea' ? 'selected' : '' %>>Idea</option>
+                        <option value="Building MVP" <%= startupFilters.stage === 'Building MVP' ? 'selected' : '' %>>Building MVP</option>
+                        <option value="Launched" <%= startupFilters.stage === 'Launched' ? 'selected' : '' %>>Launched</option>
+                        <option value="Has users" <%= startupFilters.stage === 'Has users' ? 'selected' : '' %>>Has users</option>
+                    </select>
+
+                    <label class="flex items-center space-x-2 text-xs text-gray-700 px-3 py-1.5 border border-gray-300 rounded-lg bg-white cursor-pointer">
+                        <input type="checkbox" name="hasOpenRoles" value="true" <%= startupFilters.hasOpenRoles === 'true' ? 'checked' : '' %> class="rounded border-gray-300 text-black" />
+                        <span>Has Open Roles</span>
+                    </label>
+
+                    <button type="submit" class="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-black transition">
+                        Apply Filters
+                    </button>
+                </form>
+            <% } %>
+        </div>
+
+        <!-- Member Results (M4.1) -->
+        <% if (tab === 'members' || tab === 'all') { %>
+            <div class="space-y-3">
+                <% if (tab === 'all') { %>
+                    <h2 class="text-base font-bold text-gray-900">Builders & Members (<%= (members || []).length %>)</h2>
+                <% } %>
+
+                <% if (members && members.length > 0) { %>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <% members.forEach(member => { %>
+                            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-3">
+                                <div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="flex items-center space-x-3">
+                                            <img src="<%= member.avatarUrl || '/images/default.svg' %>" alt="Avatar" class="w-12 h-12 rounded-full object-cover border border-gray-200 bg-gray-100" />
+                                            <div>
+                                                <div class="flex items-center space-x-1.5">
+                                                    <h3 class="text-sm font-bold text-gray-900"><%= member.fullName || 'Anonymous Builder' %></h3>
+                                                    <% if (member.isBuilder) { %>
+                                                        <span class="text-xs bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full border border-purple-200">
+                                                            Builder
+                                                        </span>
+                                                    <% } %>
+                                                </div>
+                                                <p class="text-xs text-gray-500">
+                                                    <%= member.college || 'Campus Member' %>
+                                                    <% if (member.branch) { %> • <%= member.branch %><% } %>
+                                                    <% if (member.year) { %> • <%= member.year %><% } %>
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <% if (member.role) { %>
+                                            <span class="text-xs bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full font-medium">
+                                                <%= member.role === 'BOTH' ? 'Founder & Joiner' : member.role %>
+                                            </span>
+                                        <% } %>
+                                    </div>
+
+                                    <% if (member.bio) { %>
+                                        <p class="text-xs text-gray-600 mt-2.5 line-clamp-2"><%= member.bio %></p>
+                                    <% } %>
+
+                                    <!-- Skills -->
+                                    <% if (member.skills && member.skills.length > 0) { %>
+                                        <div class="flex flex-wrap gap-1 mt-3">
+                                            <% member.skills.slice(0, 5).forEach(skill => { %>
+                                                <span class="text-xs bg-blue-50 text-blue-800 border border-blue-100 px-2 py-0.5 rounded">
+                                                    <%= skill %>
+                                                </span>
+                                            <% }) %>
+                                            <% if (member.skills.length > 5) { %>
+                                                <span class="text-xs text-gray-400 self-center">+<%= member.skills.length - 5 %> more</span>
+                                            <% } %>
+                                        </div>
+                                    <% } %>
+                                </div>
+
+                                <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                                    <span class="font-medium text-gray-600">
+                                        <%= member.availabilityStatus %> • <%= member.weeklyHoursAvailable || 0 %> hrs/wk
+                                    </span>
+                                    <a href="/profile/<%= member._id %>" class="text-black font-semibold hover:underline">
+                                        View Profile &rarr;
+                                    </a>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } else if (tab === 'members') { %>
+                    <div class="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+                        <p class="text-sm font-medium text-gray-700">No builders found matching your search criteria.</p>
+                        <p class="text-xs text-gray-400 mt-1">Try broadening your search query or clearing active filters.</p>
+                    </div>
+                <% } %>
+            </div>
+        <% } %>
+
+        <!-- Startup Results (M4.2) -->
+        <% if (tab === 'startups' || tab === 'all') { %>
+            <div class="space-y-3">
+                <% if (tab === 'all') { %>
+                    <h2 class="text-base font-bold text-gray-900 mt-4">Startups & Projects (<%= (startups || []).length %>)</h2>
+                <% } %>
+
+                <% if (startups && startups.length > 0) { %>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <% startups.forEach(startup => { %>
+                            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-3">
+                                <div>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <h3 class="text-base font-bold text-gray-900"><%= startup.name %></h3>
+                                        <div class="flex items-center gap-1.5">
+                                            <% if (startup.visibility === 'STEALTH') { %>
+                                                <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium border border-gray-200">
+                                                    Stealth
+                                                </span>
+                                            <% } %>
+                                            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-semibold">
+                                                <%= startup.stage %>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <p class="text-xs text-gray-600 mt-2 line-clamp-2"><%= startup.pitch %></p>
+
+                                    <!-- Industry Tags -->
+                                    <% if (startup.industryTags && startup.industryTags.length > 0) { %>
+                                        <div class="flex flex-wrap gap-1 mt-2.5">
+                                            <% startup.industryTags.forEach(tag => { %>
+                                                <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                                                    <%= tag %>
+                                                </span>
+                                            <% }) %>
+                                        </div>
+                                    <% } %>
+                                </div>
+
+                                <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                                    <span class="text-gray-500 font-medium">
+                                        <%= (startup.openRoles || []).filter(r => r.status === 'OPEN').length %> open roles
+                                    </span>
+                                    <a href="/startup/<%= startup._id %>" class="text-black font-semibold hover:underline">
+                                        View Startup &rarr;
+                                    </a>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } else if (tab === 'startups') { %>
+                    <div class="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+                        <p class="text-sm font-medium text-gray-700">No startups found matching your search criteria.</p>
+                        <p class="text-xs text-gray-400 mt-1">Try broadening your search query or clearing active filters.</p>
+                    </div>
+                <% } %>
+            </div>
+        <% } %>
+    </main>
+</body>
+</html>
