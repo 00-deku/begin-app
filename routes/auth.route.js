@@ -5,6 +5,8 @@ import {
   handleGetUserSignIn,
   handleGetLogin,
   logout,
+  handleGoogleLogin,
+  handleGoogleCallback,
 } from "../controllers/auth.controller.js";
 
 const router = Router();
@@ -14,6 +16,10 @@ router.get("/signup", handleGetUserSignIn);
 router.get("/signin", handleGetLogin);
 router.get("/login", handleGetLogin);
 router.get("/logout", logout);
+
+// Google OAuth routes
+router.get("/google", handleGoogleLogin);
+router.get("/google/callback", handleGoogleCallback);
 
 // API routes
 router.post("/send-otp", requestOTP);
