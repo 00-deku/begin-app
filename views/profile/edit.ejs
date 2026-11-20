@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title>Edit Profile | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('../partials/nav') %>
+
+    <main class="flex-1 max-w-3xl w-full mx-auto p-6 space-y-6">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight">Edit Builder Profile</h1>
+                <p class="text-sm text-gray-500">Configure your identity, availability, past work, and privacy controls.</p>
+            </div>
+            <a href="/profile" class="text-sm font-medium text-gray-600 hover:text-black border border-gray-300 rounded-lg px-3.5 py-1.5 transition">
+                Back to Profile
+            </a>
+        </div>
+
+        <div id="statusMessage" class="hidden p-3 rounded-lg text-sm"></div>
+
+        <!-- Avatar Upload -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <h2 class="text-base font-semibold text-gray-900 mb-3">Profile Photo</h2>
+            <div class="flex items-center space-x-5">
+                <img id="avatarPreview" src="<%= profile.avatarUrl || '/images/default.svg' %>" alt="Avatar" class="w-16 h-16 rounded-full object-cover border border-gray-200 bg-gray-100" />
+                <form id="avatarForm" class="flex items-center space-x-3">
+                    <input type="file" id="avatarInput" name="avatar" accept="image/*" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200" />
+                    <button type="submit" class="text-xs bg-black text-white px-3 py-2 rounded-lg font-medium hover:bg-gray-800 transition">
+                        Upload
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Profile Form -->
+        <form id="editProfileForm" class="space-y-6">
+            <!-- Basic Identity -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-base font-semibold text-gray-900">Basic Information</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" name="fullName" value="<%= profile.fullName || '' %>" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">College / University</label>
+                        <input type="text" name="college" value="<%= profile.college || '' %>" required class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
+                        <input type="text" name="year" value="<%= profile.year || '' %>" placeholder="e.g. 2nd Year" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Branch / Major</label>
+                        <input type="text" name="branch" value="<%= profile.branch || '' %>" placeholder="e.g. Computer Science" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-medium text-gray-700">Bio (Max 280 characters)</label>
+                        <span id="bioCharCount" class="text-xs text-gray-400">0 / 280</span>
+                    </div>
+                    <textarea id="bioInput" name="bio" rows="3" maxlength="280" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black"><%= profile.bio || '' %></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                    <select name="role" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="FOUNDER" <%= profile.role === 'FOUNDER' ? 'selected' : '' %>>Founder (Building an idea/startup)</option>
+                        <option value="JOINER" <%= profile.role === 'JOINER' ? 'selected' : '' %>>Joiner (Looking to join a startup)</option>
+                        <option value="BOTH" <%= profile.role === 'BOTH' ? 'selected' : '' %>>Both (Founder and Joiner)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Availability & Commitment (Requirement M2.3) -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-base font-semibold text-gray-900">Availability & Commitment</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Availability Indicator</label>
+                        <select name="availabilityStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="Open to join" <%= profile.availabilityStatus === 'Open to join' ? 'selected' : '' %>>Open to join</option>
+                            <option value="Looking for co-founder" <%= profile.availabilityStatus === 'Looking for co-founder' ? 'selected' : '' %>>Looking for co-founder</option>
+                            <option value="Just exploring" <%= profile.availabilityStatus === 'Just exploring' ? 'selected' : '' %>>Just exploring</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Weekly Hours Available</label>
+                        <input type="number" min="0" max="168" name="weeklyHoursAvailable" value="<%= profile.weeklyHoursAvailable || 0 %>" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Skills, Interests, Looking-For (Requirement M2.1) -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-base font-semibold text-gray-900">Skills, Interests & Looking For</h2>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Skills (comma-separated)</label>
+                    <input type="text" name="skills" value="<%= (profile.skills || []).join(', ') %>" placeholder="e.g. Node.js, React, Python, UI Design" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Interests & Industries (comma-separated)</label>
+                    <input type="text" name="interests" value="<%= (profile.interests || []).join(', ') %>" placeholder="e.g. FinTech, AI, EdTech, Climate" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Looking For Tags (comma-separated)</label>
+                    <input type="text" name="lookingFor" value="<%= (profile.lookingFor || []).join(', ') %>" placeholder="e.g. Co-founder, Teammates, Feedback, Learning" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                </div>
+            </div>
+
+            <!-- Startup Details -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-base font-semibold text-gray-900">Startup / Project Information</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Startup Name</label>
+                        <input type="text" name="startupName" value="<%= profile.founderDetails?.startupName || '' %>" placeholder="e.g. CampusCart" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-black" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Current Stage</label>
+                        <select name="stage" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            <option value="Idea" <%= profile.founderDetails?.stage === 'Idea' ? 'selected' : '' %>>Idea</option>
+                            <option value="Building MVP" <%= profile.founderDetails?.stage === 'Building MVP' ? 'selected' : '' %>>Building MVP</option>
+                            <option value="Launched" <%= profile.founderDetails?.stage === 'Launched' ? 'selected' : '' %>>Launched</option>
+                            <option value="Has users" <%= profile.founderDetails?.stage === 'Has users' ? 'selected' : '' %>>Has users</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- External Links (Requirement M2.5) -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-base font-semibold text-gray-900">External Links</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">LinkedIn Profile</label>
+                        <input type="url" name="linkedin" value="<%= profile.socialLinks?.linkedin || '' %>" placeholder="https://linkedin.com/in/username" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">GitHub Profile</label>
+                        <input type="url" name="github" value="<%= profile.socialLinks?.github || '' %>" placeholder="https://github.com/username" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Twitter / X Profile</label>
+                        <input type="url" name="twitter" value="<%= profile.socialLinks?.twitter || '' %>" placeholder="https://twitter.com/username" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Portfolio or Website</label>
+                        <input type="url" name="portfolio" value="<%= profile.socialLinks?.portfolio || '' %>" placeholder="https://myportfolio.dev" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Controls (Requirement M2.6) -->
+            <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-base font-semibold text-gray-900">Privacy Controls</h2>
+
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" name="hideYear" <%= profile.privacy?.hideYear ? 'checked' : '' %> class="rounded border-gray-300 text-black focus:ring-black" />
+                        <span class="text-sm text-gray-700">Hide academic year on public profile</span>
+                    </label>
+
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" name="hideBranch" <%= profile.privacy?.hideBranch ? 'checked' : '' %> class="rounded border-gray-300 text-black focus:ring-black" />
+                        <span class="text-sm text-gray-700">Hide branch / department on public profile</span>
+                    </label>
+
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" name="allowIntroRequests" <%= profile.privacy?.allowIntroRequests !== false ? 'checked' : '' %> class="rounded border-gray-300 text-black focus:ring-black" />
+                        <span class="text-sm text-gray-700">Allow other builders to send Intro Requests</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <a href="/profile" class="px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+                    Cancel
+                </a>
+                <button type="submit" id="saveProfileBtn" class="px-5 py-2.5 bg-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition">
+                    Save Profile
+                </button>
+            </div>
+        </form>
+
+        <!-- Past Work Management (Requirement M2.2) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-4">
+            <h2 class="text-base font-semibold text-gray-900">Past Work & Project Links</h2>
+
+            <!-- Existing Work List -->
+            <div id="pastWorkList" class="space-y-2">
+                <% if (profile.pastWork && profile.pastWork.length > 0) { %>
+                    <% profile.pastWork.forEach(work => { %>
+                        <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between" id="work-<%= work._id %>">
+                            <div>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-xs font-mono bg-white border border-gray-200 px-2 py-0.5 rounded text-gray-600"><%= work.linkType %></span>
+                                    <a href="<%= work.url %>" target="_blank" rel="noopener noreferrer" class="text-sm font-medium text-gray-900 hover:underline"><%= work.title %></a>
+                                </div>
+                                <% if (work.description) { %>
+                                    <p class="text-xs text-gray-500 mt-1"><%= work.description %></p>
+                                <% } %>
+                            </div>
+                            <button type="button" onclick="deletePastWork('<%= work._id %>')" class="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1">
+                                Delete
+                            </button>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <p id="noWorkMessage" class="text-xs text-gray-400">No past work entries yet. Add your portfolio, GitHub repositories, Figma files, or live demos below.</p>
+                <% } %>
+            </div>
+
+            <!-- Add Work Form -->
+            <form id="addPastWorkForm" class="pt-4 border-t border-gray-100 space-y-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500">Add New Work Item</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <input type="text" id="workTitle" placeholder="Title (e.g. Begin MVP)" required class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    <input type="url" id="workUrl" placeholder="URL (e.g. https://github.com/...)" required class="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                    <select id="workLinkType" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="GitHub">GitHub</option>
+                        <option value="Behance">Behance</option>
+                        <option value="Portfolio">Portfolio</option>
+                        <option value="Figma">Figma</option>
+                        <option value="Live Demo">Live Demo</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <input type="text" id="workDescription" maxlength="280" placeholder="Short description of the work" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                <button type="submit" class="text-xs bg-gray-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-black transition">
+                    Add Past Work
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        const bioInput = document.getElementById("bioInput");
+        const bioCharCount = document.getElementById("bioCharCount");
+
+        function updateBioCount() {
+            if (bioInput && bioCharCount) {
+                bioCharCount.textContent = bioInput.value.length + " / 280";
+            }
+        }
+        if (bioInput) {
+            bioInput.addEventListener("input", updateBioCount);
+            updateBioCount();
+        }
+
+        function showStatus(message, isError) {
+            const el = document.getElementById("statusMessage");
+            el.className = isError 
+                ? "p-3 rounded-lg text-sm bg-red-50 text-red-700 border border-red-200" 
+                : "p-3 rounded-lg text-sm bg-green-50 text-green-700 border border-green-200";
+            el.textContent = message;
+            el.classList.remove("hidden");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        // Avatar Upload Handler
+        document.getElementById("avatarForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById("avatarInput");
+            if (!fileInput.files.length) return;
+
+            const formData = new FormData();
+            formData.append("avatar", fileInput.files[0]);
+
+            try {
+                const res = await fetch("/profile/api/avatar", {
+                    method: "POST",
+                    body: formData,
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById("avatarPreview").src = data.avatarUrl;
+                    showStatus("Avatar uploaded successfully.", false);
+                } else {
+                    showStatus(data.message || "Failed to upload avatar.", true);
+                }
+            } catch (err) {
+                showStatus("Network error uploading avatar.", true);
+            }
+        });
+
+        // Main Profile Form Handler
+        document.getElementById("editProfileForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const payload = {
+                fullName: form.fullName.value,
+                college: form.college.value,
+                year: form.year.value,
+                branch: form.branch.value,
+                bio: form.bio.value,
+                role: form.role.value,
+                availabilityStatus: form.availabilityStatus.value,
+                weeklyHoursAvailable: form.weeklyHoursAvailable.value,
+                skills: form.skills.value,
+                interests: form.interests.value,
+                lookingFor: form.lookingFor.value,
+                founderDetails: {
+                    startupName: form.startupName.value,
+                    stage: form.stage.value,
+                },
+                socialLinks: {
+                    linkedin: form.linkedin.value,
+                    github: form.github.value,
+                    twitter: form.twitter.value,
+                    portfolio: form.portfolio.value,
+                },
+                privacy: {
+                    hideYear: form.hideYear.checked,
+                    hideBranch: form.hideBranch.checked,
+                    allowIntroRequests: form.allowIntroRequests.checked,
+                },
+            };
+
+            try {
+                const res = await fetch("/profile/api/me", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showStatus("Profile saved successfully. Redirecting...", false);
+                    setTimeout(() => {
+                        window.location.href = "/profile";
+                    }, 800);
+                } else {
+                    showStatus(data.message || "Error saving profile.", true);
+                }
+            } catch (err) {
+                showStatus("Network error saving profile.", true);
+            }
+        });
+
+        // Add Past Work Handler
+        document.getElementById("addPastWorkForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const title = document.getElementById("workTitle").value;
+            const url = document.getElementById("workUrl").value;
+            const linkType = document.getElementById("workLinkType").value;
+            const description = document.getElementById("workDescription").value;
+
+            try {
+                const res = await fetch("/profile/api/past-work", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title, url, linkType, description }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    showStatus(data.message || "Failed to add work.", true);
+                }
+            } catch (err) {
+                showStatus("Network error adding past work.", true);
+            }
+        });
+
+        // Delete Past Work Handler
+        async function deletePastWork(workId) {
+            if (!confirm("Remove this work item?")) return;
+            try {
+                const res = await fetch(`/profile/api/past-work/${workId}`, {
+                    method: "DELETE",
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const row = document.getElementById(`work-${workId}`);
+                    if (row) row.remove();
+                    showStatus("Work removed successfully.", false);
+                } else {
+                    showStatus(data.message || "Failed to delete work item.", true);
+                }
+            } catch (err) {
+                showStatus("Network error deleting past work.", true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('partials/head') %>
+    <title>Error | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('partials/nav') %>
+
+    <main class="flex-1 max-w-lg w-full mx-auto p-6 flex items-center justify-center">
+        <div class="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm text-center w-full">
+            <h1 class="text-xl font-bold text-gray-900 mb-2">Notice</h1>
+            <p class="text-sm text-gray-600 mb-6"><%= locals.message || locals.error || 'Something went wrong.' %></p>
+            <a href="/" class="text-sm bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800 transition">
+                Return to Home
+            </a>
+        </div>
+    </main>
+</body>
+</html>

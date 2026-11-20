@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <%- include('../partials/head') %>
+    <title><%= profile.fullName || 'Builder Profile' %> | Begin</title>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col pt-20">
+    <%- include('../partials/nav') %>
+
+    <main class="flex-1 max-w-4xl w-full mx-auto p-6 space-y-6">
+        <!-- Profile Header Card -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <img 
+                        src="<%= profile.avatarUrl || '/images/default.svg' %>" 
+                        alt="Avatar" 
+                        class="w-16 h-16 rounded-full object-cover border border-gray-200 bg-gray-100"
+                    />
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h1 class="text-2xl font-bold tracking-tight">
+                                <%= profile.fullName || 'Anonymous Builder' %>
+                            </h1>
+
+                            <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                Verified Student
+                            </span>
+
+                            <% if (profile.isBuilder) { %>
+                                <span class="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-purple-200">
+                                    Builder Badge
+                                </span>
+                            <% } %>
+
+                            <% if (profile.role) { %>
+                                <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                    <%= profile.role === 'BOTH' ? 'Founder & Joiner' : profile.role %>
+                                </span>
+                            <% } %>
+                        </div>
+
+                        <p class="text-sm text-gray-500 mt-1">
+                            <%= profile.college || 'Campus Member' %>
+                            <% if (profile.branch) { %> • <%= profile.branch %><% } %>
+                            <% if (profile.year) { %> • <%= profile.year %><% } %>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <% if (isOwner) { %>
+                        <a href="/profile/edit" class="text-sm bg-black hover:bg-gray-800 text-white font-medium px-4 py-2 rounded-lg transition">
+                            Edit Profile
+                        </a>
+                    <% } else { %>
+                        <% if (profile.canSendIntro) { %>
+                            <button class="text-sm bg-black hover:bg-gray-800 text-white font-medium px-4 py-2 rounded-lg transition">
+                                Request Intro
+                            </button>
+                        <% } else { %>
+                            <span class="text-xs text-gray-400 bg-gray-100 px-3 py-1.5 rounded-lg">
+                                Intros Closed
+                            </span>
+                        <% } %>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Bio -->
+            <div class="mt-5 pt-4 border-t border-gray-100">
+                <p class="text-sm text-gray-700 leading-relaxed">
+                    <%= profile.bio || 'No bio provided yet.' %>
+                </p>
+            </div>
+        </div>
+
+        <!-- Completion Progress (Owner Only) -->
+        <% if (isOwner) { %>
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-600">
+                    Profile Completion: <%= profile.profileCompletionPercentage %>%
+                </h2>
+                <span class="text-xs font-medium <%= profile.isBuilder ? 'text-green-600' : 'text-orange-600' %>">
+                    <%= profile.isBuilder ? 'Builder Badge Active (80%+ completed)' : 'Reach 80% to earn Builder Badge' %>
+                </span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                <div class="bg-black h-2.5 rounded-full transition-all duration-300" style="width: <%= profile.profileCompletionPercentage %>%"></div>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Availability and Commitment (Requirement M2.3) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Availability & Commitment</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Status</span>
+                    <p class="text-sm font-semibold text-gray-800 mt-1">
+                        <%= profile.availabilityStatus || 'Just exploring' %>
+                    </p>
+                </div>
+                <div class="p-4 bg-gray-50 border border-gray-100 rounded-xl">
+                    <span class="text-xs font-medium text-gray-400 uppercase tracking-wider">Weekly Commitment</span>
+                    <p class="text-sm font-semibold text-gray-800 mt-1">
+                        <%= profile.weeklyHoursAvailable || 0 %> hours / week
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills and Interests (Requirement M2.1) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-5">
+            <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">Skills</h2>
+                <div class="flex flex-wrap gap-2">
+                    <% if (profile.skills && profile.skills.length > 0) { %>
+                        <% profile.skills.forEach(skill => { %>
+                            <span class="text-xs font-medium text-blue-800 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full">
+                                <%= skill %>
+                            </span>
+                        <% }) %>
+                    <% } else { %>
+                        <span class="text-xs text-gray-400">No skills listed yet.</span>
+                    <% } %>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">Interests & Domains</h2>
+                <div class="flex flex-wrap gap-2">
+                    <% if (profile.interests && profile.interests.length > 0) { %>
+                        <% profile.interests.forEach(interest => { %>
+                            <span class="text-xs font-medium text-purple-800 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full">
+                                <%= interest %>
+                            </span>
+                        <% }) %>
+                    <% } else { %>
+                        <span class="text-xs text-gray-400">No interests listed yet.</span>
+                    <% } %>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-2">Looking For</h2>
+                <div class="flex flex-wrap gap-2">
+                    <% if (profile.lookingFor && profile.lookingFor.length > 0) { %>
+                        <% profile.lookingFor.forEach(item => { %>
+                            <span class="text-xs font-medium text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+                                <%= item %>
+                            </span>
+                        <% }) %>
+                    <% } else { %>
+                        <span class="text-xs text-gray-400">No looking-for tags added.</span>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Startups & Past Work (Requirement M2.2) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Linked Startups & Projects</h2>
+                <% if (profile.founderDetails?.startupName) { %>
+                    <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl mb-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-orange-900"><%= profile.founderDetails.startupName %></h3>
+                            <span class="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded font-medium">
+                                <%= profile.founderDetails.stage || 'Idea' %>
+                            </span>
+                        </div>
+                    </div>
+                <% } %>
+
+                <% if (profile.linkedStartups && profile.linkedStartups.length > 0) { %>
+                    <div class="space-y-2">
+                        <% profile.linkedStartups.forEach(startup => { %>
+                            <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-between">
+                                <span class="text-sm font-medium text-gray-900"><%= startup.name %></span>
+                                <span class="text-xs text-gray-500"><%= startup.role || 'Member' %> • <%= startup.stage || 'Active' %></span>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } else if (!profile.founderDetails?.startupName) { %>
+                    <p class="text-xs text-gray-400">No linked startups or active ventures registered yet.</p>
+                <% } %>
+            </div>
+
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 mb-3">Past Work & Proof of Work</h2>
+                <% if (profile.pastWork && profile.pastWork.length > 0) { %>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <% profile.pastWork.forEach(work => { %>
+                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-xl flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between">
+                                        <h4 class="text-sm font-semibold text-gray-900"><%= work.title %></h4>
+                                        <span class="text-xs font-mono text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded">
+                                            <%= work.linkType %>
+                                        </span>
+                                    </div>
+                                    <% if (work.description) { %>
+                                        <p class="text-xs text-gray-600 mt-1"><%= work.description %></p>
+                                    <% } %>
+                                </div>
+                                <div class="mt-3 pt-2 border-t border-gray-200">
+                                    <a href="<%= work.url %>" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                        View Link &rarr;
+                                    </a>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } else { %>
+                    <p class="text-xs text-gray-400">No past work links provided yet.</p>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- External Links (Requirement M2.5) -->
+        <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-gray-900 mb-3">External Links</h2>
+            <div class="flex flex-wrap gap-4 text-sm">
+                <% if (profile.socialLinks?.github) { %>
+                    <a href="<%= profile.socialLinks.github %>" target="_blank" rel="noopener noreferrer" class="text-gray-700 hover:text-black font-medium underline">
+                        GitHub
+                    </a>
+                <% } %>
+                <% if (profile.socialLinks?.linkedin) { %>
+                    <a href="<%= profile.socialLinks.linkedin %>" target="_blank" rel="noopener noreferrer" class="text-gray-700 hover:text-black font-medium underline">
+                        LinkedIn
+                    </a>
+                <% } %>
+                <% if (profile.socialLinks?.twitter) { %>
+                    <a href="<%= profile.socialLinks.twitter %>" target="_blank" rel="noopener noreferrer" class="text-gray-700 hover:text-black font-medium underline">
+                        Twitter / X
+                    </a>
+                <% } %>
+                <% if (profile.socialLinks?.portfolio) { %>
+                    <a href="<%= profile.socialLinks.portfolio %>" target="_blank" rel="noopener noreferrer" class="text-gray-700 hover:text-black font-medium underline">
+                        Portfolio Website
+                    </a>
+                <% } %>
+                <% if (!profile.socialLinks?.github && !profile.socialLinks?.linkedin && !profile.socialLinks?.twitter && !profile.socialLinks?.portfolio) { %>
+                    <span class="text-xs text-gray-400">No external profiles connected.</span>
+                <% } %>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
