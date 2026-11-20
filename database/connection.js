@@ -9,20 +9,20 @@ const connectDB = async () => {
     }
 
     const conn = await mongoose.connect(mongoUri);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`❌ MongoDB Connection Error: ${error.message}`);
+    console.error(`MongoDB Connection Error: ${error.message}`);
     process.exit(1);
   }
 };
 
 // Event listeners for connection monitoring
 mongoose.connection.on("disconnected", () => {
-  console.warn("⚠️  MongoDB disconnected. Attempting to reconnect...");
+  console.warn("MongoDB disconnected. Attempting to reconnect...");
 });
 
 mongoose.connection.on("error", (err) => {
-  console.error(`❌ MongoDB Runtime Error: ${err.message}`);
+  console.error(`MongoDB Runtime Error: ${err.message}`);
 });
 
 export default connectDB;
