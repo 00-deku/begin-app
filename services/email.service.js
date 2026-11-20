@@ -1,7 +1,7 @@
 // your services code here
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_dev_key");
 
 const sendOTPEmail = async ({ to, otp, purpose }) => {
   const isSignup = purpose === "SIGNUP";

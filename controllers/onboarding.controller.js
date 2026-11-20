@@ -67,10 +67,10 @@ export const getProfilePage = async (req, res) => {
   }
 };
 
-// POST /api/onboarding/profile - Save Profile Details & Complete Onboarding
+// POST /api/onboarding/profile - Save Profile Details and Complete Onboarding
 export const saveProfile = async (req, res) => {
   try {
-    const { fullName, college, bio, startupName, stage, skills } = req.body;
+    const { fullName, college, bio, startupName, stage, skills, year, branch, interests, lookingFor } = req.body;
 
     if (!fullName || !college) {
       return res.status(400).json({
@@ -79,31 +79,47 @@ export const saveProfile = async (req, res) => {
       });
     }
 
-    const updateData = {
-      fullName: fullName.trim(),
-      college: college.trim(),
-      bio: (bio || "").trim(),
-      isOnboarded: true, // Mark onboarding complete!
-    };
+    const profile = await Profile.findOne({ userId: req.user.userId });
+    if (!profile) {
+      return res.status(404).json({ success: false, message: "Profile not found." });
+    }
+
+    profile.fullName = fullName.trim();
+    profile.college = college.trim();
+    profile.bio = (bio || "").trim().slice(0, 280);
+    profile.isOnboarded = true;
+
+    if (year) profile.year = String(year).trim();
+    if (branch) profile.branch = String(branch).trim();
 
     if (startupName) {
-      updateData["founderDetails.startupName"] = startupName.trim();
+      if (!profile.founderDetails) profile.founderDetails = {};
+      profile.founderDetails.startupName = startupName.trim();
     }
     if (stage) {
-      updateData["founderDetails.stage"] = stage.trim();
+      if (!profile.founderDetails) profile.founderDetails = {};
+      profile.founderDetails.stage = stage.trim();
     }
     if (skills) {
-      updateData["joinerDetails.skills"] = skills
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
+      const parsedSkills = Array.isArray(skills)
+        ? skills
+        : skills.split(",").map((s) => s.trim()).filter(Boolean);
+      profile.skills = parsedSkills;
+      if (!profile.joinerDetails) profile.joinerDetails = {};
+      profile.joinerDetails.skills = parsedSkills;
+    }
+    if (interests) {
+      profile.interests = Array.isArray(interests)
+        ? interests
+        : interests.split(",").map((i) => i.trim()).filter(Boolean);
+    }
+    if (lookingFor) {
+      profile.lookingFor = Array.isArray(lookingFor)
+        ? lookingFor
+        : lookingFor.split(",").map((l) => l.trim()).filter(Boolean);
     }
 
-    const profile = await Profile.findOneAndUpdate(
-      { userId: req.user.userId },
-      { $set: updateData },
-      { new: true }
-    );
+    await profile.save();
 
     return res.status(200).json({
       success: true,

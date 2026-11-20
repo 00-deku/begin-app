@@ -7,6 +7,7 @@ import postRoute from "./routes/post.route.js";
 import authRoute from "./routes/auth.route.js";
 import { attachUser, requireOnboarded } from "./middlewares/auth.middleware.js";
 import onboardingRoute from "./routes/onboarding.route.js";
+import profileRoute from "./routes/profile.route.js";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -23,7 +24,6 @@ app.use(cookieParser());
 // Attach user to every request (from JWT cookie)
 app.use(attachUser);
 
-
 app.set("view engine", "ejs");
 app.set("views", path.resolve("./views"));
 
@@ -33,7 +33,8 @@ app.use("/api/auth", authRoute);
 app.use("/auth", authRoute);
 app.use("/user", authRoute);
 app.use("/onboarding", onboardingRoute);
-
+app.use("/profile", profileRoute);
+app.use("/api/profile", profileRoute);
 
 // Pages
 app.get("/", requireOnboarded, (req, res) => {
@@ -41,5 +42,5 @@ app.get("/", requireOnboarded, (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server started at http://localhost:${PORT}`);
+  console.log(`Server started at http://localhost:${PORT}`);
 });
