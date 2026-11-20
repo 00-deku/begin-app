@@ -5,17 +5,17 @@ import sendVerificationOTP from "../services/otp.service.js";
 import { verifyOTP } from "../utils/otp.js";
 import jwt from "jsonwebtoken";
 
-// ─── GET /auth/signup ─────────────────────────────────────────────────────────
+// GET /auth/signup
 export function handleGetUserSignIn(req, res) {
   return res.render("signup", { user: res.locals.user });
 }
 
-// ─── GET /auth/login ──────────────────────────────────────────────────────────
+// GET /auth/login
 export function handleGetLogin(req, res) {
   return res.render("login", { user: res.locals.user });
 }
 
-// ─── POST /api/auth/send-otp ──────────────────────────────────────────────────
+// POST /api/auth/send-otp
 export const requestOTP = async (req, res) => {
   try {
     let { email, purpose } = req.body;
@@ -48,13 +48,12 @@ export const requestOTP = async (req, res) => {
     const result = await sendVerificationOTP(email, purpose);
 
     return res.status(200).json({ success: true, message: result.message });
-
   } catch (error) {
     return res.status(400).json({ success: false, message: error.message });
   }
 };
 
-// ─── POST /api/auth/verify-otp ────────────────────────────────────────────────
+// POST /api/auth/verify-otp
 export const verifyOTPAndLogin = async (req, res) => {
   try {
     let { email, otp, purpose } = req.body;
@@ -100,14 +99,12 @@ export const verifyOTPAndLogin = async (req, res) => {
     let user;
 
     if (purpose === "SIGNUP") {
-      // Create user if not exists, else just verify email
       user = await Auth.findOneAndUpdate(
         { email },
         { email, isEmailVerified: true, emailVerifiedAt: new Date() },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
     } else {
-      // LOGIN — just fetch existing user
       user = await Auth.findOne({ email });
       if (!user) {
         return res.status(404).json({ success: false, message: "Account not found." });
@@ -121,7 +118,7 @@ export const verifyOTPAndLogin = async (req, res) => {
         email: user.email,
         role: user.role,
       },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || "supersecretjwtkeyforbeginapp2026",
       { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
     );
 
@@ -130,10 +127,9 @@ export const verifyOTPAndLogin = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-        // Check if user has completed onboarding
     const profile = await Profile.findOne({ userId: user._id });
     const isOnboarded = profile?.isOnboarded || false;
 
@@ -143,14 +139,12 @@ export const verifyOTPAndLogin = async (req, res) => {
       isOnboarded,
       nextStep: isOnboarded ? "/" : "/onboarding/role",
     });
-
-
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ─── POST /api/auth/logout ────────────────────────────────────────────────────
+// POST /api/auth/logout
 export const logout = (req, res) => {
   res.clearCookie("token");
   return res.redirect("/");
