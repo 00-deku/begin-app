@@ -1,16 +1,20 @@
 import Profile from "../models/profile.model.js";
 import Startup from "../models/startup.model.js";
+import Follow from "../models/follow.model.js";
+import Shortlist from "../models/shortlist.model.js";
 import "../models/auth.model.js";
 
 /**
  * Service managing member and startup discovery, keyword search across
- * names and skills, and multi-criteria directory filtering.
+ * names and skills, multi-criteria filtering, suggested matches,
+ * social follow tracking, and private shortlisting.
  */
 
 function escapeRegex(text) {
   return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
 }
 
+// M4.1: Member Directory with Multi-Criteria Filters
 export async function searchMembers(query = "", filters = {}, requesterUserId = null) {
   const mongoQuery = { isOnboarded: true };
 
@@ -70,6 +74,7 @@ export async function searchMembers(query = "", filters = {}, requesterUserId = 
   });
 }
 
+// M4.2: Startup Directory with Multi-Criteria Filters
 export async function searchStartups(query = "", filters = {}, requesterUserId = null) {
   const mongoQuery = { isArchived: false };
 
@@ -131,6 +136,7 @@ export async function searchStartups(query = "", filters = {}, requesterUserId =
   });
 }
 
+// M4.3: Unified Keyword Search
 export async function globalSearch(keyword, requesterUserId = null) {
   const trimmed = (keyword || "").trim();
   if (!trimmed) {
@@ -141,6 +147,289 @@ export async function globalSearch(keyword, requesterUserId = null) {
     searchMembers(trimmed, {}, requesterUserId),
     searchStartups(trimmed, {}, requesterUserId),
   ]);
+
+  return { members, startups };
+}
+
+// M4.4: Suggested Matches (Rule-based complementary skills and shared interests)
+export async function getSuggestedMatches(userId) {
+  if (!userId) {
+    return { recommendedMembers: [], recommendedStartups: [] };
+  }
+
+  const userProfile = await Profile.findOne({ userId });
+  if (!userProfile) {
+    return { recommendedMembers: [], recommendedStartups: [] };
+  }
+
+  const userSkills = (userProfile.skills || []).map((s) => s.toLowerCase());
+  const userInterests = (userProfile.interests || []).map((i) => i.toLowerCase());
+  const userLookingFor = (userProfile.lookingFor || []).map((l) => l.toLowerCase());
+
+  // Rule-based complementary skill clusters
+  const COMPLEMENTARY_MAP = {
+    technical: ["ui/ux design", "product management", "marketing", "growth", "business development", "finance"],
+    design: ["frontend development", "react", "full stack", "node.js", "python", "mobile development"],
+    business: ["full stack development", "react", "node.js", "python", "ui/ux design", "machine learning"],
+  };
+
+  const isTechnical = userSkills.some((s) =>
+    ["react", "node.js", "python", "javascript", "backend", "full stack", "frontend"].some((tech) => s.includes(tech))
+  );
+  const isDesigner = userSkills.some((s) => ["design", "ui", "ux", "figma"].some((d) => s.includes(d)));
+
+  let targetSkills = [];
+  if (isTechnical) {
+    targetSkills = [...COMPLEMENTARY_MAP.technical];
+  } else if (isDesigner) {
+    targetSkills = [...COMPLEMENTARY_MAP.design];
+  } else {
+    targetSkills = [...COMPLEMENTARY_MAP.business];
+  }
+
+  // 1. Recommended Members: query all other onboarded members
+  const candidateMembers = await Profile.find({
+    userId: { $ne: userId },
+    isOnboarded: true,
+  }).populate("userId", "email role");
+
+  const scoredMembers = candidateMembers.map((candidate) => {
+    let score = 0;
+    const reasons = [];
+
+    const candSkills = (candidate.skills || []).map((s) => s.toLowerCase());
+    const candInterests = (candidate.interests || []).map((i) => i.toLowerCase());
+
+    // Check complementary skills
+    const matchingCompSkills = candSkills.filter((s) =>
+      targetSkills.some((target) => s.includes(target) || target.includes(s))
+    );
+    if (matchingCompSkills.length > 0) {
+      score += matchingCompSkills.length * 3;
+      reasons.push(`Complementary skill: ${candidate.skills.find((s) => matchingCompSkills.includes(s.toLowerCase()))}`);
+    }
+
+    // Check user looking-for tags against candidate skills or bio
+    if (userLookingFor.length > 0) {
+      const lookingMatches = candSkills.filter((s) =>
+        userLookingFor.some((looking) => s.includes(looking) || looking.includes(s))
+      );
+      if (lookingMatches.length > 0) {
+        score += lookingMatches.length * 4;
+        reasons.push(`Matches what you are looking for: ${lookingMatches.join(", ")}`);
+      }
+    }
+
+    // Check shared interests
+    const sharedInterests = candInterests.filter((i) => userInterests.includes(i));
+    if (sharedInterests.length > 0) {
+      score += sharedInterests.length * 2;
+      reasons.push(`Shared interest: ${sharedInterests[0]}`);
+    }
+
+    // Prioritize active builders & available members
+    if (candidate.isBuilder) score += 2;
+    if (candidate.availabilityStatus === "Open to join" || candidate.availabilityStatus === "Looking for co-founder") {
+      score += 2;
+    }
+
+    const obj = candidate.toObject();
+    if (obj.privacy?.hideYear) delete obj.year;
+    if (obj.privacy?.hideBranch) delete obj.branch;
+
+    obj.score = score;
+    obj.matchReason = reasons[0] || "Active builder on campus";
+    return obj;
+  });
+
+  scoredMembers.sort((a, b) => b.score - a.score || b.profileCompletionPercentage - a.profileCompletionPercentage);
+  const recommendedMembers = scoredMembers.slice(0, 5);
+
+  // 2. Recommended Startups: match startups with open roles fitting user's skills
+  const candidateStartups = await Startup.find({
+    ownerId: { $ne: userId },
+    "teamMembers.userId": { $ne: userId },
+    isArchived: false,
+  }).populate("ownerId", "email");
+
+  const scoredStartups = candidateStartups.map((startup) => {
+    let score = 0;
+    const reasons = [];
+
+    const openRoles = (startup.openRoles || []).filter((r) => r.status === "OPEN");
+    for (const role of openRoles) {
+      const neededSkills = (role.skillsNeeded || []).map((s) => s.toLowerCase());
+      const hasSkill = neededSkills.some((needed) =>
+        userSkills.some((userSkill) => needed.includes(userSkill) || userSkill.includes(needed))
+      );
+      if (hasSkill) {
+        score += 5;
+        reasons.push(`Open role matches your skill: ${role.title}`);
+        break;
+      }
+    }
+
+    // Shared industry interest
+    const industryTags = (startup.industryTags || []).map((t) => t.toLowerCase());
+    const sharedIndustry = industryTags.filter((t) => userInterests.includes(t));
+    if (sharedIndustry.length > 0) {
+      score += 3;
+      reasons.push(`Industry matches your interest: ${sharedIndustry[0]}`);
+    }
+
+    if (openRoles.length > 0) score += 2;
+
+    const obj = startup.toObject();
+    if (obj.visibility === "STEALTH") {
+      obj.name = "Stealth Project";
+      obj.pitch = "Project details are private while in stealth mode.";
+      delete obj.problem;
+      delete obj.solution;
+      delete obj.links;
+    }
+
+    obj.score = score;
+    obj.matchReason = reasons[0] || (openRoles.length > 0 ? "Actively recruiting team members" : "Active campus venture");
+    return obj;
+  });
+
+  scoredStartups.sort((a, b) => b.score - a.score || b.createdAt - a.createdAt);
+  const recommendedStartups = scoredStartups.slice(0, 5);
+
+  return { recommendedMembers, recommendedStartups };
+}
+
+// M4.5: Follow a Member or Startup
+export async function toggleFollow(followerUserId, targetType, targetId) {
+  if (!followerUserId || !targetType || !targetId) {
+    throw new Error("followerUserId, targetType, and targetId are required.");
+  }
+
+  const existing = await Follow.findOne({
+    followerId: followerUserId,
+    targetType,
+    targetId,
+  });
+
+  if (existing) {
+    await Follow.deleteOne({ _id: existing._id });
+    return { isFollowing: false };
+  }
+
+  await Follow.create({
+    followerId: followerUserId,
+    targetType,
+    targetId,
+  });
+
+  return { isFollowing: true };
+}
+
+export async function isFollowing(followerUserId, targetType, targetId) {
+  if (!followerUserId) return false;
+  const count = await Follow.countDocuments({
+    followerId: followerUserId,
+    targetType,
+    targetId,
+  });
+  return count > 0;
+}
+
+export async function getFollowingIds(followerUserId) {
+  if (!followerUserId) return { memberIds: [], startupIds: [] };
+  const follows = await Follow.find({ followerId: followerUserId }).select("targetType targetId");
+  const memberIds = follows.filter((f) => f.targetType === "USER").map((f) => f.targetId.toString());
+  const startupIds = follows.filter((f) => f.targetType === "STARTUP").map((f) => f.targetId.toString());
+  return { memberIds, startupIds };
+}
+
+// M4.6: Private Shortlist
+export async function toggleShortlist(userId, itemType, itemId, note = "") {
+  if (!userId || !itemType || !itemId) {
+    throw new Error("userId, itemType, and itemId are required.");
+  }
+
+  const existing = await Shortlist.findOne({
+    userId,
+    itemType,
+    itemId,
+  });
+
+  if (existing) {
+    await Shortlist.deleteOne({ _id: existing._id });
+    return { isShortlisted: false };
+  }
+
+  await Shortlist.create({
+    userId,
+    itemType,
+    itemId,
+    note: (note || "").slice(0, 300),
+  });
+
+  return { isShortlisted: true };
+}
+
+export async function getShortlistIds(userId) {
+  if (!userId) return { memberIds: [], startupIds: [] };
+  const shortlists = await Shortlist.find({ userId }).select("itemType itemId");
+  const memberIds = shortlists.filter((s) => s.itemType === "USER").map((s) => s.itemId.toString());
+  const startupIds = shortlists.filter((s) => s.itemType === "STARTUP").map((s) => s.itemId.toString());
+  return { memberIds, startupIds };
+}
+
+export async function getShortlist(userId) {
+  if (!userId) return { members: [], startups: [] };
+
+  const entries = await Shortlist.find({ userId }).sort({ createdAt: -1 });
+  const userEntryMap = new Map();
+  const startupEntryMap = new Map();
+
+  entries.forEach((e) => {
+    if (e.itemType === "USER") userEntryMap.set(e.itemId.toString(), e);
+    if (e.itemType === "STARTUP") startupEntryMap.set(e.itemId.toString(), e);
+  });
+
+  const memberIds = Array.from(userEntryMap.keys());
+  const startupIds = Array.from(startupEntryMap.keys());
+
+  const [rawMembers, rawStartups] = await Promise.all([
+    Profile.find({ _id: { $in: memberIds } }).populate("userId", "email role"),
+    Startup.find({ _id: { $in: startupIds }, isArchived: false }).populate("ownerId", "email"),
+  ]);
+
+  const members = rawMembers.map((member) => {
+    const isOwner = member.userId?._id?.toString() === userId.toString();
+    const obj = member.toObject();
+    if (!isOwner) {
+      if (obj.privacy?.hideYear) delete obj.year;
+      if (obj.privacy?.hideBranch) delete obj.branch;
+    }
+    const entry = userEntryMap.get(member._id.toString());
+    obj.shortlistNote = entry?.note || "";
+    obj.shortlistedAt = entry?.createdAt;
+    return obj;
+  });
+
+  const startups = rawStartups.map((startup) => {
+    const isOwner = startup.ownerId?._id?.toString() === userId.toString();
+    const isMember =
+      isOwner ||
+      Boolean(startup.teamMembers?.some((m) => m.userId?.toString() === userId.toString()));
+
+    const obj = startup.toObject();
+    if (obj.visibility === "STEALTH" && !isMember) {
+      obj.name = "Stealth Project";
+      obj.pitch = "Project details are private while in stealth mode.";
+      delete obj.problem;
+      delete obj.solution;
+      delete obj.links;
+    }
+    const entry = startupEntryMap.get(startup._id.toString());
+    obj.shortlistNote = entry?.note || "";
+    obj.shortlistedAt = entry?.createdAt;
+    return obj;
+  });
 
   return { members, startups };
 }

@@ -10,7 +10,7 @@
     <main class="flex-1 max-w-5xl w-full mx-auto p-6 space-y-6">
         <div>
             <h1 class="text-2xl font-bold tracking-tight">Campus Discovery</h1>
-            <p class="text-sm text-gray-500 mt-1">Discover student builders, co-founders, and projects across campus.</p>
+            <p class="text-sm text-gray-500 mt-1">Discover student builders, co-founders, projects, and recruitment roles across campus.</p>
         </div>
 
         <!-- Search Bar and Tabs (M4.3) -->
@@ -37,15 +37,18 @@
             </form>
 
             <!-- Navigation Tabs -->
-            <div class="flex items-center space-x-2 border-b border-gray-100 pt-2 text-sm font-medium">
-                <a href="/discovery?tab=members<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition <%= tab === 'members' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
+            <div class="flex items-center space-x-2 border-b border-gray-100 pt-2 text-sm font-medium overflow-x-auto">
+                <a href="/discovery?tab=members<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition whitespace-nowrap <%= tab === 'members' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
                     Builders & Members
                 </a>
-                <a href="/discovery?tab=startups<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition <%= tab === 'startups' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
+                <a href="/discovery?tab=startups<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition whitespace-nowrap <%= tab === 'startups' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
                     Startups & Projects
                 </a>
-                <a href="/discovery?tab=all<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition <%= tab === 'all' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
+                <a href="/discovery?tab=all<%= query ? '&q=' + encodeURIComponent(query) : '' %>" class="pb-2.5 px-3 border-b-2 transition whitespace-nowrap <%= tab === 'all' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
                     All Results
+                </a>
+                <a href="/discovery?tab=shortlist" class="pb-2.5 px-3 border-b-2 transition whitespace-nowrap <%= tab === 'shortlist' ? 'border-black text-black font-semibold' : 'border-transparent text-gray-500 hover:text-black' %>">
+                    Private Shortlist
                 </a>
             </div>
 
@@ -107,6 +110,96 @@
             <% } %>
         </div>
 
+        <!-- Private Shortlist Tab (M4.6) -->
+        <% if (tab === 'shortlist') { %>
+            <div class="space-y-6">
+                <div>
+                    <h2 class="text-base font-bold text-gray-900">Your Private Shortlist</h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Keep track of builders and startups you want to reach out to or collaborate with.</p>
+                </div>
+
+                <!-- Shortlisted Members -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Shortlisted Builders (<%= (members || []).length %>)</h3>
+                    <% if (members && members.length > 0) { %>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <% members.forEach(member => { %>
+                                <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-3">
+                                    <div>
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="flex items-center space-x-3">
+                                                <img src="<%= member.avatarUrl || '/images/default.svg' %>" alt="Avatar" class="w-12 h-12 rounded-full object-cover border border-gray-200 bg-gray-100" />
+                                                <div>
+                                                    <div class="flex items-center space-x-1.5">
+                                                        <h4 class="text-sm font-bold text-gray-900"><%= member.fullName || 'Anonymous Builder' %></h4>
+                                                        <% if (member.isBuilder) { %>
+                                                            <span class="text-xs bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded-full border border-purple-200">Builder</span>
+                                                        <% } %>
+                                                    </div>
+                                                    <p class="text-xs text-gray-500"><%= member.college || 'Campus Member' %></p>
+                                                </div>
+                                            </div>
+                                            <button onclick="toggleShortlist('USER', '<%= member._id %>', this)" class="text-xs text-red-600 hover:text-red-800 font-medium border border-red-200 rounded px-2 py-1">
+                                                Remove
+                                            </button>
+                                        </div>
+                                        <% if (member.shortlistNote) { %>
+                                            <div class="mt-2.5 p-2 bg-yellow-50 border border-yellow-100 rounded-lg text-xs text-yellow-800">
+                                                <span class="font-semibold">Note:</span> <%= member.shortlistNote %>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                    <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                                        <span class="text-gray-500 font-medium"><%= member.availabilityStatus %></span>
+                                        <a href="/profile/<%= member._id %>" class="text-black font-semibold hover:underline">View Profile &rarr;</a>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 text-center text-xs text-gray-500">
+                            No builders saved to your shortlist yet. Click "Shortlist" on any builder profile to save them here.
+                        </div>
+                    <% } %>
+                </div>
+
+                <!-- Shortlisted Startups -->
+                <div class="space-y-3 pt-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400">Shortlisted Startups (<%= (startups || []).length %>)</h3>
+                    <% if (startups && startups.length > 0) { %>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <% startups.forEach(startup => { %>
+                                <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-3">
+                                    <div>
+                                        <div class="flex items-center justify-between gap-2">
+                                            <h4 class="text-base font-bold text-gray-900"><%= startup.name %></h4>
+                                            <button onclick="toggleShortlist('STARTUP', '<%= startup._id %>', this)" class="text-xs text-red-600 hover:text-red-800 font-medium border border-red-200 rounded px-2 py-1">
+                                                Remove
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mt-2 line-clamp-2"><%= startup.pitch %></p>
+                                        <% if (startup.shortlistNote) { %>
+                                            <div class="mt-2.5 p-2 bg-yellow-50 border border-yellow-100 rounded-lg text-xs text-yellow-800">
+                                                <span class="font-semibold">Note:</span> <%= startup.shortlistNote %>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                    <div class="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                                        <span class="text-gray-500 font-medium"><%= (startup.openRoles || []).filter(r => r.status === 'OPEN').length %> open roles</span>
+                                        <a href="/startup/<%= startup._id %>" class="text-black font-semibold hover:underline">View Startup &rarr;</a>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% } else { %>
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 text-center text-xs text-gray-500">
+                            No startups saved to your shortlist yet. Click "Shortlist" on any startup to save it here.
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        <% } %>
+
         <!-- Member Results (M4.1) -->
         <% if (tab === 'members' || tab === 'all') { %>
             <div class="space-y-3">
@@ -116,12 +209,15 @@
 
                 <% if (members && members.length > 0) { %>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <% members.forEach(member => { %>
+                        <% members.forEach(member => { 
+                            const isFollowed = locals.followingMemberIds && followingMemberIds.includes(member._id.toString());
+                            const isShortlisted = locals.shortlistedMemberIds && shortlistedMemberIds.includes(member._id.toString());
+                        %>
                             <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-3">
                                 <div>
-                                    <div class="flex items-center justify-between gap-3">
+                                    <div class="flex items-start justify-between gap-3">
                                         <div class="flex items-center space-x-3">
-                                            <img src="<%= member.avatarUrl || '/images/default.svg' %>" alt="Avatar" class="w-12 h-12 rounded-full object-cover border border-gray-200 bg-gray-100" />
+                                            <img src="<%= member.avatarUrl || '/images/default.svg' %>" alt="Avatar" class="w-12 h-12 rounded-full object-cover border border-gray-200 bg-gray-100 flex-shrink-0" />
                                             <div>
                                                 <div class="flex items-center space-x-1.5">
                                                     <h3 class="text-sm font-bold text-gray-900"><%= member.fullName || 'Anonymous Builder' %></h3>
@@ -139,10 +235,22 @@
                                             </div>
                                         </div>
 
-                                        <% if (member.role) { %>
-                                            <span class="text-xs bg-gray-100 text-gray-700 px-2.5 py-0.5 rounded-full font-medium">
-                                                <%= member.role === 'BOTH' ? 'Founder & Joiner' : member.role %>
-                                            </span>
+                                        <!-- Follow (M4.5) & Shortlist (M4.6) Actions -->
+                                        <% if (!member.isOwner) { %>
+                                            <div class="flex items-center space-x-1.5 flex-shrink-0">
+                                                <button 
+                                                    type="button" 
+                                                    onclick="toggleFollow('USER', '<%= member._id %>', this)" 
+                                                    class="text-xs px-2.5 py-1 rounded-md border transition font-medium <%= isFollowed ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' %>">
+                                                    <%= isFollowed ? 'Following' : 'Follow' %>
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onclick="toggleShortlist('USER', '<%= member._id %>', this)" 
+                                                    class="text-xs px-2.5 py-1 rounded-md border transition font-medium <%= isShortlisted ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' %>">
+                                                    <%= isShortlisted ? 'Shortlisted' : 'Shortlist' %>
+                                                </button>
+                                            </div>
                                         <% } %>
                                     </div>
 
@@ -194,21 +302,44 @@
 
                 <% if (startups && startups.length > 0) { %>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <% startups.forEach(startup => { %>
+                        <% startups.forEach(startup => { 
+                            const isFollowed = locals.followingStartupIds && followingStartupIds.includes(startup._id.toString());
+                            const isShortlisted = locals.shortlistedStartupIds && shortlistedStartupIds.includes(startup._id.toString());
+                        %>
                             <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between space-y-3">
                                 <div>
-                                    <div class="flex items-center justify-between gap-2">
-                                        <h3 class="text-base font-bold text-gray-900"><%= startup.name %></h3>
-                                        <div class="flex items-center gap-1.5">
-                                            <% if (startup.visibility === 'STEALTH') { %>
-                                                <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium border border-gray-200">
-                                                    Stealth
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div>
+                                            <div class="flex items-center gap-1.5">
+                                                <h3 class="text-base font-bold text-gray-900"><%= startup.name %></h3>
+                                                <% if (startup.visibility === 'STEALTH') { %>
+                                                    <span class="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-medium border border-gray-200">
+                                                        Stealth
+                                                    </span>
+                                                <% } %>
+                                                <span class="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-semibold">
+                                                    <%= startup.stage %>
                                                 </span>
-                                            <% } %>
-                                            <span class="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-semibold">
-                                                <%= startup.stage %>
-                                            </span>
+                                            </div>
                                         </div>
+
+                                        <!-- Follow (M4.5) & Shortlist (M4.6) Actions -->
+                                        <% if (!startup.isOwner) { %>
+                                            <div class="flex items-center space-x-1.5 flex-shrink-0">
+                                                <button 
+                                                    type="button" 
+                                                    onclick="toggleFollow('STARTUP', '<%= startup._id %>', this)" 
+                                                    class="text-xs px-2.5 py-1 rounded-md border transition font-medium <%= isFollowed ? 'bg-black text-white border-black' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' %>">
+                                                    <%= isFollowed ? 'Following' : 'Follow' %>
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onclick="toggleShortlist('STARTUP', '<%= startup._id %>', this)" 
+                                                    class="text-xs px-2.5 py-1 rounded-md border transition font-medium <%= isShortlisted ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' %>">
+                                                    <%= isShortlisted ? 'Shortlisted' : 'Shortlist' %>
+                                                </button>
+                                            </div>
+                                        <% } %>
                                     </div>
 
                                     <p class="text-xs text-gray-600 mt-2 line-clamp-2"><%= startup.pitch %></p>
@@ -245,5 +376,63 @@
             </div>
         <% } %>
     </main>
+
+    <script>
+        async function toggleFollow(targetType, targetId, btn) {
+            try {
+                btn.disabled = true;
+                const res = await fetch("/api/discovery/follow", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ targetType, targetId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.isFollowing) {
+                        btn.textContent = "Following";
+                        btn.className = "text-xs px-2.5 py-1 rounded-md border transition font-medium bg-black text-white border-black";
+                    } else {
+                        btn.textContent = "Follow";
+                        btn.className = "text-xs px-2.5 py-1 rounded-md border transition font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+                    }
+                }
+            } catch (err) {
+                console.error("Follow error:", err);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function toggleShortlist(itemType, itemId, btn) {
+            try {
+                btn.disabled = true;
+                const res = await fetch("/api/discovery/shortlist", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ itemType, itemId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    if (data.isShortlisted) {
+                        btn.textContent = "Shortlisted";
+                        btn.className = "text-xs px-2.5 py-1 rounded-md border transition font-medium bg-amber-100 text-amber-900 border-amber-300";
+                    } else {
+                        // If we are currently on the shortlist tab, reload page to refresh the list
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get("tab") === "shortlist") {
+                            window.location.reload();
+                            return;
+                        }
+                        btn.textContent = "Shortlist";
+                        btn.className = "text-xs px-2.5 py-1 rounded-md border transition font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+                    }
+                }
+            } catch (err) {
+                console.error("Shortlist error:", err);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
 </body>
 </html>

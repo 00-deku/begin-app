@@ -11,6 +11,8 @@ import profileRoute from "./routes/profile.route.js";
 import startupRoute from "./routes/startup.route.js";
 import discoveryRoute from "./routes/discovery.route.js";
 
+import { getSuggestedMatches } from "./services/discovery.service.js";
+
 const app = express();
 const PORT = process.env.PORT || 8000;
 
@@ -43,8 +45,21 @@ app.use("/discovery", discoveryRoute);
 app.use("/api/discovery", discoveryRoute);
 
 // Pages
-app.get("/", requireOnboarded, (req, res) => {
-  return res.render("home", { user: res.locals.user });
+app.get("/", requireOnboarded, async (req, res) => {
+  let suggested = { recommendedMembers: [], recommendedStartups: [] };
+  if (req.user?.userId) {
+    try {
+      suggested = await getSuggestedMatches(req.user.userId);
+    } catch {
+      // Gracefully fall back if matching service encounters an issue
+    }
+  }
+
+  return res.render("home", {
+    user: res.locals.user,
+    suggestedMembers: suggested.recommendedMembers || [],
+    suggestedStartups: suggested.recommendedStartups || [],
+  });
 });
 
 app.listen(PORT, () => {
