@@ -3,6 +3,7 @@ import Profile from "../models/profile.model.js";
 import EmailOTP from "../models/opt.model.js";
 import sendVerificationOTP from "../services/otp.service.js";
 import { verifyOTP } from "../utils/otp.js";
+import { getGoogleAuthUrl, getGoogleUserFromCode } from "../services/googleAuth.service.js";
 import jwt from "jsonwebtoken";
 
 // GET /auth/signup
@@ -148,4 +149,119 @@ export const verifyOTPAndLogin = async (req, res) => {
 export const logout = (req, res) => {
   res.clearCookie("token");
   return res.redirect("/");
+};
+
+// ─── GET /auth/google ─────────────────────────────────────────────────────────
+export const handleGoogleLogin = (req, res) => {
+  try {
+    const authUrl = getGoogleAuthUrl();
+    return res.redirect(authUrl);
+  } catch (error) {
+    return res.redirect(`/auth/login?error=${encodeURIComponent(error.message)}`);
+  }
+};
+
+// ─── GET /auth/google/callback ───────────────────────────────────────────────
+export const handleGoogleCallback = async (req, res) => {
+  try {
+    const { code, error } = req.query;
+
+    if (error) {
+      return res.redirect(`/auth/login?error=${encodeURIComponent("Google sign-in was cancelled or denied.")}`);
+    }
+
+    if (!code) {
+      return res.redirect(`/auth/login?error=${encodeURIComponent("Authorization code missing from Google callback.")}`);
+    }
+
+    // Exchange code for Google tokens and retrieve user profile
+    const { user: googleUser } = await getGoogleUserFromCode(code);
+
+    if (!googleUser?.email) {
+      return res.redirect(`/auth/login?error=${encodeURIComponent("Failed to retrieve email address from Google.")}`);
+    }
+
+    const email = googleUser.email.toLowerCase().trim();
+
+    // Find existing user by googleId or email
+    let user = await Auth.findOne({
+      $or: [{ googleId: googleUser.sub }, { email }],
+    });
+
+    if (!user) {
+      // Create new user account via Google
+      user = await Auth.create({
+        email,
+        googleId: googleUser.sub,
+        isEmailVerified: true,
+        emailVerifiedAt: new Date(),
+        profileImageUrl: googleUser.picture || "/images/default.svg",
+      });
+    } else {
+      if (!user.isActive) {
+        return res.redirect(`/auth/login?error=${encodeURIComponent("Your account is currently inactive.")}`);
+      }
+
+      let shouldSave = false;
+      if (!user.googleId) {
+        user.googleId = googleUser.sub;
+        shouldSave = true;
+      }
+      if (!user.isEmailVerified) {
+        user.isEmailVerified = true;
+        user.emailVerifiedAt = new Date();
+        shouldSave = true;
+      }
+      if ((!user.profileImageUrl || user.profileImageUrl === "/images/default.svg") && googleUser.picture) {
+        user.profileImageUrl = googleUser.picture;
+        shouldSave = true;
+      }
+
+      if (shouldSave) {
+        await user.save();
+      }
+    }
+
+    // Ensure Profile document exists for user
+    let profile = await Profile.findOne({ userId: user._id });
+    if (!profile) {
+      profile = await Profile.create({
+        userId: user._id,
+        fullName: googleUser.name || "",
+        avatarUrl: googleUser.picture || "/images/default.svg",
+      });
+    } else if (!profile.fullName && googleUser.name) {
+      profile.fullName = googleUser.name;
+      if (!profile.avatarUrl || profile.avatarUrl === "/images/default.svg") {
+        profile.avatarUrl = googleUser.picture || "/images/default.svg";
+      }
+      await profile.save();
+    }
+
+    // Sign JWT
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
+    );
+
+    // Set token as httpOnly cookie
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Check if user has completed onboarding
+    const isOnboarded = profile?.isOnboarded || false;
+    return res.redirect(isOnboarded ? "/" : "/onboarding/role");
+
+  } catch (error) {
+    return res.redirect(`/auth/login?error=${encodeURIComponent(error.message || "Failed to authenticate with Google.")}`);
+  }
 };
