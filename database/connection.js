@@ -1,28 +1,4 @@
-import mongoose from "mongoose";
+import connectDB, { disconnectDB } from "../src/infrastructure/database/connection.js";
 
-const connectDB = async () => {
-  try {
-    const mongoUri = process.env.MONGO_URI;
-
-    if (!mongoUri) {
-      throw new Error("MONGO_URI is not defined in environment variables");
-    }
-
-    const conn = await mongoose.connect(mongoUri);
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
-    process.exit(1);
-  }
-};
-
-// Event listeners for connection monitoring
-mongoose.connection.on("disconnected", () => {
-  console.warn("MongoDB disconnected. Attempting to reconnect...");
-});
-
-mongoose.connection.on("error", (err) => {
-  console.error(`MongoDB Runtime Error: ${err.message}`);
-});
-
+export { connectDB, disconnectDB };
 export default connectDB;
