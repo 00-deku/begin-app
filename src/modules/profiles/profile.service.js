@@ -1,4 +1,4 @@
-import Profile from "./models/profile.model.js";
+import profileRepository from "./profile.repository.js";
 import { calculateProfileCompletion } from "../../shared/helpers/profileCompletion.helper.js";
 import { NotFoundError, BadRequestError } from "../../shared/errors/index.js";
 
@@ -34,38 +34,45 @@ function sanitizeStringList(input) {
 }
 
 export async function getProfileByUserId(userId) {
-  let profile = await Profile.findOne({ userId }).populate("userId", "email role");
-  if (!profile) {
-    profile = await Profile.create({ userId });
+  // Need to populate auth and also potentially call save, so we work with the
+  // document first via findDocumentByUserId and separately fetch populated data.
+  let profileDoc = await profileRepository.findDocumentByUserId(userId);
+  if (!profileDoc) {
+    // create returns a plain object; re-fetch the document for mutation
+    await profileRepository.create({ userId });
+    profileDoc = await profileRepository.findDocumentByUserId(userId);
   }
 
-  const { completionPercentage, isBuilder } = calculateProfileCompletion(profile);
+  const { completionPercentage, isBuilder } = calculateProfileCompletion(profileDoc);
   let changed = false;
 
-  if (profile.profileCompletionPercentage !== completionPercentage) {
-    profile.profileCompletionPercentage = completionPercentage;
+  if (profileDoc.profileCompletionPercentage !== completionPercentage) {
+    profileDoc.profileCompletionPercentage = completionPercentage;
     changed = true;
   }
-  if (profile.isBuilder !== isBuilder) {
-    profile.isBuilder = isBuilder;
-    profile.builderBadgeAwardedAt = isBuilder ? profile.builderBadgeAwardedAt || new Date() : null;
+  if (profileDoc.isBuilder !== isBuilder) {
+    profileDoc.isBuilder = isBuilder;
+    profileDoc.builderBadgeAwardedAt = isBuilder
+      ? profileDoc.builderBadgeAwardedAt || new Date()
+      : null;
     changed = true;
   }
 
   if (changed) {
-    await profile.save();
+    await profileRepository.save(profileDoc);
   }
 
-  return profile;
+  // Return with auth populated
+  return profileRepository.findByUserId(userId, true);
 }
 
 export async function getPublicProfileById(identifier, requesterUserId = null) {
   let profile = null;
 
   if (identifier && identifier.match(/^[0-9a-fA-F]{24}$/)) {
-    profile = await Profile.findById(identifier).populate("userId", "email role");
+    profile = await profileRepository.findById(identifier, true);
     if (!profile) {
-      profile = await Profile.findOne({ userId: identifier }).populate("userId", "email role");
+      profile = await profileRepository.findByUserId(identifier, true);
     }
   }
 
@@ -73,8 +80,12 @@ export async function getPublicProfileById(identifier, requesterUserId = null) {
     return null;
   }
 
-  const isOwner = requesterUserId && profile.userId?._id?.toString() === requesterUserId.toString();
-  const profileObject = profile.toObject();
+  const isOwner =
+    requesterUserId &&
+    profile.userId?._id?.toString() === requesterUserId.toString();
+
+  // profile is already a plain object from .lean()
+  const profileObject = { ...profile };
 
   if (!isOwner) {
     if (profileObject.privacy?.hideYear) {
@@ -92,7 +103,7 @@ export async function getPublicProfileById(identifier, requesterUserId = null) {
 }
 
 export async function updateProfile(userId, updateData) {
-  const profile = await Profile.findOne({ userId });
+  const profile = await profileRepository.findDocumentByUserId(userId);
   if (!profile) {
     throw new NotFoundError("Profile not found.");
   }
@@ -157,14 +168,22 @@ export async function updateProfile(userId, updateData) {
 
   if (updateData.privacy) {
     profile.privacy = {
-      hideYear: updateData.privacy.hideYear !== undefined ? Boolean(updateData.privacy.hideYear) : profile.privacy?.hideYear,
-      hideBranch: updateData.privacy.hideBranch !== undefined ? Boolean(updateData.privacy.hideBranch) : profile.privacy?.hideBranch,
-      allowIntroRequests: updateData.privacy.allowIntroRequests !== undefined ? Boolean(updateData.privacy.allowIntroRequests) : profile.privacy?.allowIntroRequests,
+      hideYear:
+        updateData.privacy.hideYear !== undefined
+          ? Boolean(updateData.privacy.hideYear)
+          : profile.privacy?.hideYear,
+      hideBranch:
+        updateData.privacy.hideBranch !== undefined
+          ? Boolean(updateData.privacy.hideBranch)
+          : profile.privacy?.hideBranch,
+      allowIntroRequests:
+        updateData.privacy.allowIntroRequests !== undefined
+          ? Boolean(updateData.privacy.allowIntroRequests)
+          : profile.privacy?.allowIntroRequests,
     };
   }
 
-  await profile.save();
-  return profile;
+  return profileRepository.save(profile);
 }
 
 export async function addPastWork(userId, { title, url, linkType, description }) {
@@ -175,12 +194,13 @@ export async function addPastWork(userId, { title, url, linkType, description })
     throw new BadRequestError("Project URL is required.");
   }
 
-  const profile = await Profile.findOne({ userId });
+  const profile = await profileRepository.findDocumentByUserId(userId);
   if (!profile) {
     throw new NotFoundError("Profile not found.");
   }
 
-  const selectedLinkType = linkType && VALID_LINK_TYPES.includes(linkType) ? linkType : "Portfolio";
+  const selectedLinkType =
+    linkType && VALID_LINK_TYPES.includes(linkType) ? linkType : "Portfolio";
 
   profile.pastWork.push({
     title: title.trim(),
@@ -189,22 +209,20 @@ export async function addPastWork(userId, { title, url, linkType, description })
     description: (description || "").trim(),
   });
 
-  await profile.save();
-  return profile;
+  return profileRepository.save(profile);
 }
 
 export async function updateAvatar(userId, avatarUrl) {
-  const profile = await Profile.findOne({ userId });
+  const profile = await profileRepository.findDocumentByUserId(userId);
   if (!profile) {
     throw new NotFoundError("Profile not found.");
   }
   profile.avatarUrl = avatarUrl;
-  await profile.save();
-  return profile;
+  return profileRepository.save(profile);
 }
 
 export async function deletePastWork(userId, pastWorkId) {
-  const profile = await Profile.findOne({ userId });
+  const profile = await profileRepository.findDocumentByUserId(userId);
   if (!profile) {
     throw new NotFoundError("Profile not found.");
   }
@@ -213,24 +231,32 @@ export async function deletePastWork(userId, pastWorkId) {
     (item) => item._id.toString() !== pastWorkId.toString()
   );
 
-  await profile.save();
-  return profile;
+  return profileRepository.save(profile);
 }
 
 export const removePastWork = deletePastWork;
 
 export async function updatePrivacySettings(userId, privacyUpdates) {
-  const profile = await Profile.findOne({ userId });
+  const profile = await profileRepository.findDocumentByUserId(userId);
   if (!profile) {
     throw new NotFoundError("Profile not found.");
   }
 
   profile.privacy = {
-    hideYear: privacyUpdates.hideYear !== undefined ? Boolean(privacyUpdates.hideYear) : profile.privacy?.hideYear,
-    hideBranch: privacyUpdates.hideBranch !== undefined ? Boolean(privacyUpdates.hideBranch) : profile.privacy?.hideBranch,
-    allowIntroRequests: privacyUpdates.allowIntroRequests !== undefined ? Boolean(privacyUpdates.allowIntroRequests) : profile.privacy?.allowIntroRequests,
+    hideYear:
+      privacyUpdates.hideYear !== undefined
+        ? Boolean(privacyUpdates.hideYear)
+        : profile.privacy?.hideYear,
+    hideBranch:
+      privacyUpdates.hideBranch !== undefined
+        ? Boolean(privacyUpdates.hideBranch)
+        : profile.privacy?.hideBranch,
+    allowIntroRequests:
+      privacyUpdates.allowIntroRequests !== undefined
+        ? Boolean(privacyUpdates.allowIntroRequests)
+        : profile.privacy?.allowIntroRequests,
   };
 
-  await profile.save();
-  return profile.privacy;
+  const saved = await profileRepository.save(profile);
+  return saved.privacy;
 }

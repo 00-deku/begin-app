@@ -1,4 +1,4 @@
-import Profile from "../profiles/models/profile.model.js";
+import profileRepository from "../profiles/profile.repository.js";
 import { NotFoundError } from "../../shared/errors/index.js";
 
 /**
@@ -6,7 +6,7 @@ import { NotFoundError } from "../../shared/errors/index.js";
  */
 
 export const getOnboardingState = async (userId) => {
-  const profile = await Profile.findOne({ userId });
+  const profile = await profileRepository.findByUserId(userId);
   return {
     profile,
     isOnboarded: Boolean(profile?.isOnboarded),
@@ -15,11 +15,7 @@ export const getOnboardingState = async (userId) => {
 };
 
 export const saveRole = async (userId, role) => {
-  const profile = await Profile.findOneAndUpdate(
-    { userId },
-    { userId, role },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
-  );
+  const profile = await profileRepository.upsertByUserId(userId, { role });
 
   return {
     profile,
@@ -28,7 +24,7 @@ export const saveRole = async (userId, role) => {
 };
 
 export const completeProfileSetup = async (userId, data) => {
-  const profile = await Profile.findOne({ userId });
+  const profile = await profileRepository.findDocumentByUserId(userId);
   if (!profile) {
     throw new NotFoundError("Profile not found.");
   }
@@ -81,10 +77,10 @@ export const completeProfileSetup = async (userId, data) => {
           .filter(Boolean);
   }
 
-  await profile.save();
+  const saved = await profileRepository.save(profile);
 
   return {
-    profile,
+    profile: saved,
     nextStep: "/",
   };
 };
