@@ -1,5 +1,5 @@
-import Startup from "./models/startup.model.js";
-import Profile from "../profiles/models/profile.model.js";
+import startupRepository from "./startup.repository.js";
+import profileRepository from "../profiles/profile.repository.js";
 import Auth from "../auth/models/auth.model.js";
 import {
   NotFoundError,
@@ -45,7 +45,7 @@ export async function createStartup(ownerId, data) {
   const selectedStage = VALID_STAGES.includes(stage) ? stage : "Idea";
   const selectedVisibility = VALID_VISIBILITIES.includes(visibility) ? visibility : "PUBLIC";
 
-  const startup = await Startup.create({
+  const startup = await startupRepository.create({
     name: name.trim(),
     pitch: trimmedPitch,
     problem: (problem || "").trim(),
@@ -71,62 +71,68 @@ export async function createStartup(ownerId, data) {
   });
 
   // Sync to founder's profile linkedStartups
-  await Profile.findOneAndUpdate(
-    { userId: ownerId },
-    {
-      $push: {
-        linkedStartups: {
-          name: startup.name,
-          stage: startup.stage,
-          role: "Founder",
-          startupId: startup._id,
-        },
+  await profileRepository.updateByUserId(ownerId, {
+    $push: {
+      linkedStartups: {
+        name: startup.name,
+        stage: startup.stage,
+        role: "Founder",
+        startupId: startup._id,
       },
-      $set: {
-        "founderDetails.startupName": startup.name,
-        "founderDetails.stage": startup.stage,
-      },
-    }
-  );
+    },
+    $set: {
+      "founderDetails.startupName": startup.name,
+      "founderDetails.stage": startup.stage,
+    },
+  });
 
   return startup;
 }
 
 export async function getStartupById(startupId, requesterUserId = null) {
-  const startup = await Startup.findById(startupId)
-    .populate("ownerId", "email")
-    .populate("teamMembers.userId", "email");
+  const startup = await startupRepository.findById(startupId, {
+    populate: [
+      { path: "ownerId", select: "email" },
+      { path: "teamMembers.userId", select: "email" },
+    ],
+  });
 
   if (!startup || startup.isArchived) {
     return null;
   }
 
-  const isOwner = requesterUserId && startup.ownerId?._id?.toString() === requesterUserId.toString();
+  const isOwner =
+    requesterUserId &&
+    startup.ownerId?._id?.toString() === requesterUserId.toString();
   const isMember =
     isOwner ||
     Boolean(
       requesterUserId &&
-        startup.teamMembers.some((m) => m.userId?._id?.toString() === requesterUserId.toString())
+        startup.teamMembers.some(
+          (m) => m.userId?._id?.toString() === requesterUserId.toString()
+        )
     );
 
-  const startupObject = startup.toObject();
-  startupObject.isOwner = Boolean(isOwner);
-  startupObject.isMember = Boolean(isMember);
+  startup.isOwner = Boolean(isOwner);
+  startup.isMember = Boolean(isMember);
 
   // M3.4 Stealth mode: hide idea text from non-members while keeping roles and skills visible
-  if (startupObject.visibility === "STEALTH" && !isMember) {
-    startupObject.name = "Stealth Project";
-    startupObject.pitch = "Project details are private while in stealth mode.";
-    delete startupObject.problem;
-    delete startupObject.solution;
-    delete startupObject.links;
+  if (startup.visibility === "STEALTH" && !isMember) {
+    startup.name = "Stealth Project";
+    startup.pitch = "Project details are private while in stealth mode.";
+    delete startup.problem;
+    delete startup.solution;
+    delete startup.links;
   }
 
-  if (startupObject.milestones) {
-    startupObject.milestones.sort((a, b) => new Date(b.date || b.completedDate) - new Date(a.date || a.completedDate));
+  if (startup.milestones) {
+    startup.milestones.sort(
+      (a, b) =>
+        new Date(b.date || b.completedDate) - new Date(a.date || a.completedDate)
+    );
   }
 
-  return startupObject;
+  return startup;
 }
 
 export async function listStartups(filter = {}, requesterUserId = null) {
@@ -144,37 +150,41 @@ export async function listStartups(filter = {}, requesterUserId = null) {
     query.ownerId = filter.ownerId;
   }
 
-  const startups = await Startup.find(query)
-    .populate("ownerId", "email")
-    .sort({ createdAt: -1 });
+  const startups = await startupRepository.findMany(query, {
+    populate: [{ path: "ownerId", select: "email" }],
+    sort: { createdAt: -1 },
+  });
 
   return startups.map((startup) => {
-    const isOwner = requesterUserId && startup.ownerId?._id?.toString() === requesterUserId.toString();
+    const isOwner =
+      requesterUserId &&
+      startup.ownerId?._id?.toString() === requesterUserId.toString();
     const isMember =
       isOwner ||
       Boolean(
         requesterUserId &&
-          startup.teamMembers.some((m) => m.userId?.toString() === requesterUserId.toString())
+          startup.teamMembers.some(
+            (m) => m.userId?.toString() === requesterUserId.toString()
+          )
       );
 
-    const obj = startup.toObject();
-    obj.isOwner = Boolean(isOwner);
-    obj.isMember = Boolean(isMember);
+    startup.isOwner = Boolean(isOwner);
+    startup.isMember = Boolean(isMember);
 
-    if (obj.visibility === "STEALTH" && !isMember) {
-      obj.name = "Stealth Project";
-      obj.pitch = "Project details are private while in stealth mode.";
-      delete obj.problem;
-      delete obj.solution;
-      delete obj.links;
+    if (startup.visibility === "STEALTH" && !isMember) {
+      startup.name = "Stealth Project";
+      startup.pitch = "Project details are private while in stealth mode.";
+      delete startup.problem;
+      delete startup.solution;
+      delete startup.links;
     }
 
-    return obj;
+    return startup;
   });
 }
 
 export async function updateStartup(startupId, ownerId, updateData) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup || startup.isArchived) {
     throw new NotFoundError("Startup not found.");
   }
@@ -225,12 +235,11 @@ export async function updateStartup(startupId, ownerId, updateData) {
     };
   }
 
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }
 
 export async function inviteTeamMember(startupId, ownerId, { email, role }) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup || startup.isArchived) {
     throw new NotFoundError("Startup not found.");
   }
@@ -273,28 +282,24 @@ export async function inviteTeamMember(startupId, ownerId, { email, role }) {
       const lastInv = startup.invitations[startup.invitations.length - 1];
       if (lastInv) lastInv.status = "ACCEPTED";
 
-      await Profile.findOneAndUpdate(
-        { userId: targetUser._id },
-        {
-          $push: {
-            linkedStartups: {
-              name: startup.name,
-              stage: startup.stage,
-              role: role || "Team Member",
-              startupId: startup._id,
-            },
+      await profileRepository.updateByUserId(targetUser._id, {
+        $push: {
+          linkedStartups: {
+            name: startup.name,
+            stage: startup.stage,
+            role: role || "Team Member",
+            startupId: startup._id,
           },
-        }
-      );
+        },
+      });
     }
   }
 
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }
 
 export async function removeTeamMember(startupId, ownerId, targetUserId) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup || startup.isArchived) {
     throw new NotFoundError("Startup not found.");
   }
@@ -311,17 +316,15 @@ export async function removeTeamMember(startupId, ownerId, targetUserId) {
     (m) => m.userId.toString() !== targetUserId.toString()
   );
 
-  await Profile.findOneAndUpdate(
-    { userId: targetUserId },
-    { $pull: { linkedStartups: { startupId: startup._id } } }
-  );
+  await profileRepository.updateByUserId(targetUserId, {
+    $pull: { linkedStartups: { startupId: startup._id } },
+  });
 
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }
 
 export async function addOpenRole(startupId, ownerId, roleData) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup || startup.isArchived) {
     throw new NotFoundError("Startup not found.");
   }
@@ -345,12 +348,11 @@ export async function addOpenRole(startupId, ownerId, roleData) {
     createdAt: new Date(),
   });
 
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }
 
 export async function removeOpenRole(startupId, ownerId, roleId) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup || startup.isArchived) {
     throw new NotFoundError("Startup not found.");
   }
@@ -363,12 +365,11 @@ export async function removeOpenRole(startupId, ownerId, roleId) {
     (r) => r._id.toString() !== roleId.toString()
   );
 
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }
 
 export async function addMilestone(startupId, ownerId, milestoneData) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup || startup.isArchived) {
     throw new NotFoundError("Startup not found.");
   }
@@ -389,12 +390,11 @@ export async function addMilestone(startupId, ownerId, milestoneData) {
     completedDate: date ? new Date(date) : new Date(),
   });
 
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }
 
 export async function transferOwnership(startupId, currentOwnerId, newOwnerId) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup || startup.isArchived) {
     throw new NotFoundError("Startup not found.");
   }
@@ -411,12 +411,11 @@ export async function transferOwnership(startupId, currentOwnerId, newOwnerId) {
   }
 
   startup.ownerId = newOwnerId;
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }
 
 export async function archiveStartup(startupId, ownerId) {
-  const startup = await Startup.findById(startupId);
+  const startup = await startupRepository.findDocumentById(startupId);
   if (!startup) {
     throw new NotFoundError("Startup not found.");
   }
@@ -427,6 +426,5 @@ export async function archiveStartup(startupId, ownerId) {
 
   startup.isArchived = true;
   startup.archivedAt = new Date();
-  await startup.save();
-  return startup;
+  return startupRepository.save(startup);
 }

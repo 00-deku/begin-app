@@ -1,7 +1,9 @@
+// TODO: replace with profileRepository once src/modules/profiles/profile.repository.js is created
 import Profile from "../profiles/models/profile.model.js";
+// TODO: replace with startupRepository once src/modules/startups/startup.repository.js is created
 import Startup from "../startups/models/startup.model.js";
-import Follow from "./models/follow.model.js";
-import Shortlist from "./models/shortlist.model.js";
+import followRepository from "./follow.repository.js";
+import shortlistRepository from "./shortlist.repository.js";
 import "../auth/models/auth.model.js";
 import { escapeRegex } from "../../shared/utils/string.utils.js";
 import { BadRequestError } from "../../shared/errors/index.js";
@@ -297,18 +299,18 @@ export async function toggleFollow(followerUserId, targetType, targetId) {
     throw new BadRequestError("followerUserId, targetType, and targetId are required.");
   }
 
-  const existing = await Follow.findOne({
+  const existing = await followRepository.findOne({
     followerId: followerUserId,
     targetType,
     targetId,
   });
 
   if (existing) {
-    await Follow.deleteOne({ _id: existing._id });
+    await followRepository.deleteOne({ _id: existing._id });
     return { isFollowing: false };
   }
 
-  await Follow.create({
+  await followRepository.create({
     followerId: followerUserId,
     targetType,
     targetId,
@@ -319,17 +321,20 @@ export async function toggleFollow(followerUserId, targetType, targetId) {
 
 export async function isFollowing(followerUserId, targetType, targetId) {
   if (!followerUserId) return false;
-  const count = await Follow.countDocuments({
+  const total = await followRepository.count({
     followerId: followerUserId,
     targetType,
     targetId,
   });
-  return count > 0;
+  return total > 0;
 }
 
 export async function getFollowingIds(followerUserId) {
   if (!followerUserId) return { memberIds: [], startupIds: [] };
-  const follows = await Follow.find({ followerId: followerUserId }).select("targetType targetId");
+  const follows = await followRepository.findMany(
+    { followerId: followerUserId },
+    { select: "targetType targetId" }
+  );
   const memberIds = follows.filter((f) => f.targetType === "USER").map((f) => f.targetId.toString());
   const startupIds = follows.filter((f) => f.targetType === "STARTUP").map((f) => f.targetId.toString());
   return { memberIds, startupIds };
@@ -341,18 +346,18 @@ export async function toggleShortlist(userId, itemType, itemId, note = "") {
     throw new BadRequestError("userId, itemType, and itemId are required.");
   }
 
-  const existing = await Shortlist.findOne({
+  const existing = await shortlistRepository.findOne({
     userId,
     itemType,
     itemId,
   });
 
   if (existing) {
-    await Shortlist.deleteOne({ _id: existing._id });
+    await shortlistRepository.deleteOne({ _id: existing._id });
     return { isShortlisted: false };
   }
 
-  await Shortlist.create({
+  await shortlistRepository.create({
     userId,
     itemType,
     itemId,
@@ -364,7 +369,10 @@ export async function toggleShortlist(userId, itemType, itemId, note = "") {
 
 export async function getShortlistIds(userId) {
   if (!userId) return { memberIds: [], startupIds: [] };
-  const shortlists = await Shortlist.find({ userId }).select("itemType itemId");
+  const shortlists = await shortlistRepository.findMany(
+    { userId },
+    { select: "itemType itemId" }
+  );
   const memberIds = shortlists.filter((s) => s.itemType === "USER").map((s) => s.itemId.toString());
   const startupIds = shortlists.filter((s) => s.itemType === "STARTUP").map((s) => s.itemId.toString());
   return { memberIds, startupIds };
@@ -373,7 +381,7 @@ export async function getShortlistIds(userId) {
 export async function getShortlist(userId) {
   if (!userId) return { members: [], startups: [] };
 
-  const entries = await Shortlist.find({ userId }).sort({ createdAt: -1 });
+  const entries = await shortlistRepository.findMany({ userId }, { sort: { createdAt: -1 } });
   const userEntryMap = new Map();
   const startupEntryMap = new Map();
 

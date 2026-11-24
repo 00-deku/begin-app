@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import config from "../../config/env.js";
-import Auth from "./models/auth.model.js";
-import EmailOTP from "./models/otp.model.js";
-import Profile from "../profiles/models/profile.model.js";
+import authRepository from "./auth.repository.js";
+import otpRepository from "./otp.repository.js";
+import profileRepository from "../profiles/profile.repository.js";
 import sendOTPEmail from "../../infrastructure/email/email.service.js";
 import { generateOTP, hashOTP, verifyOTP } from "../../shared/utils/crypto.utils.js";
 import {
@@ -18,7 +18,7 @@ import {
  */
 
 export const requestOTP = async (email, purpose) => {
-  const user = await Auth.findOne({ email });
+  const user = await authRepository.findByEmail(email);
 
   if (purpose === "SIGNUP" && user?.isEmailVerified) {
     throw new ConflictError("Account already exists. Please login.");
@@ -33,25 +33,23 @@ export const requestOTP = async (email, purpose) => {
   }
 
   // Prevent frequent OTP requests within cooldown window
-  const recentOTP = await EmailOTP.findOne({
+  const recentOTP = await otpRepository.findRecentOTP(
     email,
     purpose,
-    createdAt: {
-      $gt: new Date(Date.now() - config.otp.cooldownSeconds * 1000),
-    },
-  });
+    new Date(Date.now() - config.otp.cooldownSeconds * 1000)
+  );
 
   if (recentOTP) {
     throw new BadRequestError("Please wait 60 seconds before requesting another OTP.");
   }
 
   // Invalidate previous OTPs for this email and purpose
-  await EmailOTP.deleteMany({ email, purpose });
+  await otpRepository.deleteOTPsByEmailAndPurpose(email, purpose);
 
   const otp = generateOTP();
   console.log(`[AUTH OTP] Code for ${email} (${purpose}): ${otp}`);
 
-  const otpRecord = await EmailOTP.create({
+  const otpRecord = await otpRepository.createOTP({
     email,
     otpHash: hashOTP(otp),
     purpose,
@@ -80,54 +78,46 @@ export const requestOTP = async (email, purpose) => {
       };
     }
 
-    await EmailOTP.deleteOne({ _id: otpRecord._id });
+    await otpRepository.deleteOTPById(otpRecord._id);
     throw error;
   }
 };
 
 export const verifyOTPAndAuthenticate = async (email, otp, purpose) => {
-  const otpRecord = await EmailOTP.findOne({
-    email,
-    purpose,
-    isUsed: false,
-    expiresAt: { $gt: new Date() },
-  });
+  const otpRecord = await otpRepository.findActiveOTP(email, purpose);
 
   if (!otpRecord) {
     throw new BadRequestError("OTP expired or not found. Please request a new one.");
   }
 
   if (otpRecord.attempts >= config.otp.maxAttempts) {
-    await EmailOTP.deleteOne({ _id: otpRecord._id });
+    await otpRepository.deleteOTPById(otpRecord._id);
     throw new BadRequestError("Too many failed attempts. Please request a new OTP.");
   }
 
   const isValid = verifyOTP(otp, otpRecord.otpHash);
   if (!isValid) {
-    await EmailOTP.updateOne({ _id: otpRecord._id }, { $inc: { attempts: 1 } });
+    await otpRepository.incrementAttempts(otpRecord._id);
     throw new BadRequestError("Invalid OTP. Please try again.");
   }
 
-  await EmailOTP.updateOne(
-    { _id: otpRecord._id },
-    { isUsed: true, verifiedAt: new Date() }
-  );
+  await otpRepository.markOTPUsed(otpRecord._id);
 
   let user;
   if (purpose === "SIGNUP") {
-    user = await Auth.findOneAndUpdate(
-      { email },
-      { email, isEmailVerified: true, emailVerifiedAt: new Date() },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    user = await authRepository.upsertByEmail(email, {
+      email,
+      isEmailVerified: true,
+      emailVerifiedAt: new Date(),
+    });
   } else {
-    user = await Auth.findOne({ email });
+    user = await authRepository.findByEmail(email);
     if (!user) {
       throw new NotFoundError("Account not found.");
     }
   }
 
-  const profile = await Profile.findOne({ userId: user._id });
+  const profile = await profileRepository.findByUserId(user._id);
   const isOnboarded = Boolean(profile?.isOnboarded);
   const token = generateAuthToken(user);
 
@@ -146,12 +136,10 @@ export const authenticateWithGoogle = async (googleUser) => {
 
   const email = googleUser.email.toLowerCase().trim();
 
-  let user = await Auth.findOne({
-    $or: [{ googleId: googleUser.sub }, { email }],
-  });
+  let user = await authRepository.findByGoogleIdOrEmail(googleUser.sub, email);
 
   if (!user) {
-    user = await Auth.create({
+    user = await authRepository.create({
       email,
       googleId: googleUser.sub,
       isEmailVerified: true,
@@ -163,39 +151,39 @@ export const authenticateWithGoogle = async (googleUser) => {
       throw new ForbiddenError("Your account is currently inactive.");
     }
 
-    let shouldSave = false;
+    const updates = {};
     if (!user.googleId) {
-      user.googleId = googleUser.sub;
-      shouldSave = true;
+      updates.googleId = googleUser.sub;
     }
     if (!user.isEmailVerified) {
-      user.isEmailVerified = true;
-      user.emailVerifiedAt = new Date();
-      shouldSave = true;
+      updates.isEmailVerified = true;
+      updates.emailVerifiedAt = new Date();
     }
     if ((!user.profileImageUrl || user.profileImageUrl === "/images/default.svg") && googleUser.picture) {
-      user.profileImageUrl = googleUser.picture;
-      shouldSave = true;
+      updates.profileImageUrl = googleUser.picture;
     }
 
-    if (shouldSave) {
-      await user.save();
+    if (Object.keys(updates).length > 0) {
+      user = await authRepository.updateById(user._id, updates);
     }
   }
 
-  let profile = await Profile.findOne({ userId: user._id });
+  let profile = await profileRepository.findByUserId(user._id);
   if (!profile) {
-    profile = await Profile.create({
+    profile = await profileRepository.create({
       userId: user._id,
       fullName: googleUser.name || "",
       avatarUrl: googleUser.picture || "/images/default.svg",
     });
   } else if (!profile.fullName && googleUser.name) {
-    profile.fullName = googleUser.name;
-    if (!profile.avatarUrl || profile.avatarUrl === "/images/default.svg") {
-      profile.avatarUrl = googleUser.picture || "/images/default.svg";
+    const doc = await profileRepository.findDocumentByUserId(user._id);
+    if (doc) {
+      doc.fullName = googleUser.name;
+      if (!doc.avatarUrl || doc.avatarUrl === "/images/default.svg") {
+        doc.avatarUrl = googleUser.picture || "/images/default.svg";
+      }
+      profile = await profileRepository.save(doc);
     }
-    await profile.save();
   }
 
   const token = generateAuthToken(user);
